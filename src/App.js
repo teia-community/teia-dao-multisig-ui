@@ -23,7 +23,7 @@ export function App() {
 export function MultisigParameters() {
     return (
         <main>
-            <h1>Tezos multisig / mini-DAO</h1>
+            <h1>Teia Core Team Multisig</h1>
             <Parameters />
         </main>
     );
