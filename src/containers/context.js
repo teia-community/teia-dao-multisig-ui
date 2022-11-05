@@ -394,7 +394,7 @@ export class MultisigContextProvider extends React.Component {
                 // Update the storage, the balance, the user aliases and the proposals
                 const storage = await utils.getContractStorage(this.state.contractAddress);
                 const balance = await utils.getBalance(this.state.contractAddress);
-                const userAliases = await utils.getUserAliases(storage.users);
+                const userAliases = await utils.getUserAliases(storage.users.concat(storage.proposed_users));
                 const proposals = await utils.getBigmapKeys(storage.proposals);
                 this.setState({
                     storage: storage,
@@ -422,7 +422,7 @@ export class MultisigContextProvider extends React.Component {
 
                 // Update the storage and the user aliases
                 const storage = await utils.getContractStorage(this.state.contractAddress);
-                const userAliases = await utils.getUserAliases(storage.users);
+                const userAliases = await utils.getUserAliases(storage.users.concat(storage.proposed_users));
                 this.setState({
                     storage: storage,
                     userAliases: userAliases
@@ -447,28 +447,11 @@ export class MultisigContextProvider extends React.Component {
 
                 // Update the storage and the user aliases
                 const storage = await utils.getContractStorage(this.state.contractAddress);
-                const userAliases = await utils.getUserAliases(storage.users);
+                const userAliases = await utils.getUserAliases(storage.users.concat(storage.proposed_users));
                 this.setState({
                     storage: storage,
                     userAliases: userAliases
                 });
-            },
-
-            // Uploads some metadata to ipfs and returns the ipfs path
-            uploadMetadataToIpfs: async (metadata, displayUploadInformation) => {
-                // Display the information message
-                if (displayUploadInformation) this.state.setInformationMessage('Uploading the json metadata to ipfs...');
-
-                // Upload the metadata IPFS
-                console.log('Uploading the json metadata to ipfs...');
-                const added = await utils.uploadFileToIPFSProxy(new Blob([JSON.stringify(metadata)]))
-                    .catch(error => console.log('Error while uploading the json metadata to ipfs:', error));
-
-                // Remove the information message
-                if (displayUploadInformation) this.state.setInformationMessage(undefined);
-
-                // Return the IPFS path
-                return added?.data.cid;
             },
 
             // Uploads a file to ipfs and returns the ipfs path

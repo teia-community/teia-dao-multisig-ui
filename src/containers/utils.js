@@ -16,17 +16,6 @@ export async function getContract(tezos, contractAddress) {
         .catch(error => console.log('Error while accessing the contract:', error));
 }
 
-// Returns the addresses of similar contracts
-export async function getSimilarContractAddresses(contractAddress, network = NETWORK) {
-    const parameters = {
-        select: 'address'
-    };
-    const response = await axios.get(`https://api.${network}.tzkt.io/v1/contracts/${contractAddress}/same`, { params: parameters })
-        .catch(error => console.log('Error while querying similar contract addresses:', error));
-
-    return response?.data.reverse();
-}
-
 // Returns the contract storage
 export async function getContractStorage(contractAddress, network = NETWORK) {
     const response = await axios.get(`https://api.${network}.tzkt.io/v1/contracts/${contractAddress}/storage`)

@@ -4,7 +4,7 @@ A basic react app to interact with the Teia Core Team Multisig [smart contract](
 
 ## Installation
 
-This should work with Node.js v16.14.2:
+This should work with Node.js v16.18.0:
 
 ```bash
 cd teia-dao-multisig-ui
