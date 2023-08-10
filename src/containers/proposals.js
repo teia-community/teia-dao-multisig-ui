@@ -287,7 +287,7 @@ function ProposalActions(props) {
     const isUser = storage?.users.includes(userAddress);
 
     // Check if the proposal can be executed
-    const canExecute = props.positiveVotes >= storage?.minimum_votes;
+    const canExecute = parseInt(props.positiveVotes) >= parseInt(storage?.minimum_votes);
 
     // Get the vote class name
     const userVote = userVotes && userVotes[props.id];
