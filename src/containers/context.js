@@ -14,7 +14,7 @@ const tezos = new TezosToolkit(RPC_NODE);
 // Initialize the wallet
 const wallet = new BeaconWallet({
     name: 'DAO multisig',
-    preferredNetwork: NETWORK
+    network: { type: NETWORK, rpcUrl: RPC_NODE }
 });
 
 // Pass the wallet to the tezos toolkit
@@ -96,7 +96,7 @@ export class MultisigContextProvider extends React.Component {
             // Connects the user wallet
             connectWallet: async () => {
                 console.log('Connecting the user wallet...');
-                await wallet.requestPermissions({ network: { type: NETWORK, rpcUrl: RPC_NODE } })
+                await wallet.requestPermissions()
                     .catch(error => console.log('Error while requesting wallet permissions:', error));
 
                 console.log('Accessing the user address...');

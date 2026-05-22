@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Parser, emitMicheline } from '@taquito/michel-codec';
-import { encodePubKey } from '@taquito/utils';
+import { encodeKey } from '@taquito/utils';
 import { TOKENS } from '../constants';
 import { MultisigContext } from './context';
 import { Button } from './button';
@@ -260,7 +260,7 @@ function ProposalDescriptionContent(props) {
         // Encode any addresses that the Micheline code might contain
         const encodedMichelineCode = michelineCode.replace(
             /0x0[0123]{1}[\w\d]{42}/g,
-            (match) => `"${encodePubKey(match.slice(2))}"`
+            (match) => `"${encodeKey(match.slice(2))}"`
         );
 
         return (
