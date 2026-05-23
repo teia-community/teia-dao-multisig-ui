@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import { MultisigContextProvider } from './containers/context';
 import { Header } from './containers/header';
@@ -7,12 +7,26 @@ import { Parameters } from './containers/parameters';
 import { Proposals } from './containers/proposals';
 import { CreateProposalForms } from './containers/forms';
 
+function getInitialDarkMode() {
+    const stored = localStorage.getItem('darkMode');
+    if (stored !== null) return stored === 'true';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
 
 export function App() {
+    const [darkMode, setDarkMode] = useState(getInitialDarkMode);
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+        localStorage.setItem('darkMode', darkMode);
+    }, [darkMode]);
+
+    const toggleDarkMode = useCallback(() => setDarkMode(d => !d), []);
+
     return (
         <MultisigContextProvider>
             <div className='app-container'>
-                <Header />
+                <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
                 <Outlet />
                 <Footer />
             </div>

@@ -5,14 +5,15 @@ import { TezosAddressLink } from './links';
 import { Button } from './button';
 
 
-export function Header() {
+export function Header({ darkMode, toggleDarkMode }) {
     return (
         <header className='header-container'>
             <Navigation />
-            <Wallet />
+            <Wallet darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
         </header>
     );
 }
+
 
 export function Navigation() {
     return (
@@ -32,8 +33,7 @@ export function Navigation() {
     );
 }
 
-export function Wallet() {
-    // Get the required multisig context information
+export function Wallet({ darkMode, toggleDarkMode }) {
     const { userAddress, connectWallet, disconnectWallet } = useContext(MultisigContext);
 
     return (
@@ -45,6 +45,7 @@ export function Wallet() {
                 <Button text='unsync' onClick={() => disconnectWallet()} /> :
                 <Button text='sync' onClick={() => connectWallet()} />
             }
+            <Button text={darkMode ? 'light' : 'dark'} onClick={toggleDarkMode} />
         </div>
     );
 }
