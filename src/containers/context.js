@@ -1,6 +1,6 @@
 import React, { createContext } from 'react';
 import { TezosToolkit } from '@taquito/taquito';
-import { BeaconWallet } from '@taquito/beacon-wallet';
+import { BeaconWallet, BeaconEvent } from '@taquito/beacon-wallet';
 import { Parser } from '@taquito/michel-codec';
 import { validateAddress } from '@taquito/utils';
 import { NETWORK, CONTRACT_ADDRESS, RPC_NODE } from '../constants';
@@ -98,16 +98,7 @@ export class MultisigContextProvider extends React.Component {
                 console.log('Connecting the user wallet...');
                 await wallet.requestPermissions()
                     .catch(error => console.log('Error while requesting wallet permissions:', error));
-
-                console.log('Accessing the user address...');
-                const userAddress = await utils.getUserAddress(wallet);
-                this.setState({ userAddress: userAddress });
-
-                if (this.state.storage && userAddress) {
-                    console.log('Downloading the user votes...');
-                    const userVotes = await utils.getUserVotes(userAddress, this.state.storage.votes);
-                    this.setState({ userVotes: userVotes });
-                }
+                // userAddress state is updated via the ACTIVE_ACCOUNT_SET subscription below
             },
 
             // Disconnects the user wallet
@@ -172,7 +163,7 @@ export class MultisigContextProvider extends React.Component {
                 if (!contract) return;
 
                 // Create the text proposal
-                this.state.createProposal(contract.methods.text_proposal, utils.stringToHex('ipfs://' + ipfsPath));
+                this.state.createProposal(contract.methodsObject.text_proposal, utils.stringToHex('ipfs://' + ipfsPath));
             },
 
             // Creates a transfer mutez proposal
@@ -205,7 +196,7 @@ export class MultisigContextProvider extends React.Component {
                 if (!contract) return;
 
                 // Create the transfer mutez proposal
-                this.state.createProposal(contract.methods.transfer_mutez_proposal, transfers);
+                this.state.createProposal(contract.methodsObject.transfer_mutez_proposal, transfers);
             },
 
             // Creates a transfer token proposal
@@ -257,7 +248,7 @@ export class MultisigContextProvider extends React.Component {
                 if (!contract) return;
 
                 // Create the minimum votes proposal
-                this.state.createProposal(contract.methods.minimum_votes_proposal, minimumVotes);
+                this.state.createProposal(contract.methodsObject.minimum_votes_proposal, minimumVotes);
             },
 
             // Creates an expiration time proposal
@@ -275,7 +266,7 @@ export class MultisigContextProvider extends React.Component {
                 if (!contract) return;
 
                 // Create the expiration time proposal
-                this.state.createProposal(contract.methods.expiration_time_proposal, expirationTime);
+                this.state.createProposal(contract.methodsObject.expiration_time_proposal, expirationTime);
             },
 
             // Creates an add user proposal
@@ -299,7 +290,7 @@ export class MultisigContextProvider extends React.Component {
                 if (!contract) return;
 
                 // Create the add user proposal
-                this.state.createProposal(contract.methods.add_user_proposal, userAddress);
+                this.state.createProposal(contract.methodsObject.add_user_proposal, userAddress);
             },
 
             // Creates a remove user proposal
@@ -323,7 +314,7 @@ export class MultisigContextProvider extends React.Component {
                 if (!contract) return;
 
                 // Create the remove user proposal
-                this.state.createProposal(contract.methods.remove_user_proposal, userAddress);
+                this.state.createProposal(contract.methodsObject.remove_user_proposal, userAddress);
             },
 
             // Creates a lambda function proposal
@@ -346,7 +337,7 @@ export class MultisigContextProvider extends React.Component {
                 if (!contract) return;
 
                 // Create the lambda function proposal
-                this.state.createProposal(contract.methods.lambda_function_proposal, lambdaFunction);
+                this.state.createProposal(contract.methodsObject.lambda_function_proposal, lambdaFunction);
             },
 
             // Votes a proposal
@@ -359,7 +350,7 @@ export class MultisigContextProvider extends React.Component {
 
                 // Send the vote proposal operation
                 console.log('Sending the vote proposal operation...');
-                const operation = await contract.methods.vote_proposal(proposalId, approval).send()
+                const operation = await contract.methodsObject.vote_proposal(proposalId, approval).send()
                     .catch(error => console.log('Error while sending the vote proposal operation:', error));
 
                 // Wait for the confirmation
@@ -385,7 +376,7 @@ export class MultisigContextProvider extends React.Component {
 
                 // Send the execute proposal operation
                 console.log('Sending the execute proposal operation...');
-                const operation = await contract.methods.execute_proposal(proposalId).send()
+                const operation = await contract.methodsObject.execute_proposal(proposalId).send()
                     .catch(error => console.log('Error while sending the execute proposal operation:', error));
 
                 // Wait for the confirmation
@@ -414,7 +405,7 @@ export class MultisigContextProvider extends React.Component {
 
                 // Send the accept membership operation
                 console.log('Sending the accept membership operation...');
-                const operation = await contract.methods.accept_membership(accept).send()
+                const operation = await contract.methodsObject.accept_membership(accept).send()
                     .catch(error => console.log('Error while sending the accept membership operation:', error));
 
                 // Wait for the confirmation
@@ -439,7 +430,7 @@ export class MultisigContextProvider extends React.Component {
 
                 // Send the leave multisig operation
                 console.log('Sending the leave multisig operation...');
-                const operation = await contract.methods.leave_multisig().send()
+                const operation = await contract.methodsObject.leave_multisig().send()
                     .catch(error => console.log('Error while sending the leave multisig operation:', error));
 
                 // Wait for the confirmation
@@ -517,6 +508,19 @@ export class MultisigContextProvider extends React.Component {
     }
 
     componentDidMount() {
+        // Beacon SDK v4+ requires an active subscription for ACTIVE_ACCOUNT_SET.
+        // This fires after requestPermissions and keeps the user address in sync.
+        wallet.client.subscribeToEvent(BeaconEvent.ACTIVE_ACCOUNT_SET, async (account) => {
+            const userAddress = account?.address;
+            const newState = { userAddress, userVotes: undefined, contract: undefined };
+
+            if (userAddress && this.state.storage) {
+                newState.userVotes = await utils.getUserVotes(userAddress, this.state.storage.votes);
+            }
+
+            this.setState(newState);
+        });
+
         // Load all the relevant information
         this.loadInformation();
     }
