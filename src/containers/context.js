@@ -350,7 +350,7 @@ export class MultisigContextProvider extends React.Component {
 
                 // Send the vote proposal operation
                 console.log('Sending the vote proposal operation...');
-                const operation = await contract.methodsObject.vote_proposal(proposalId, approval).send()
+                const operation = await contract.methodsObject.vote_proposal({ proposal_id: proposalId, approval: approval }).send()
                     .catch(error => console.log('Error while sending the vote proposal operation:', error));
 
                 // Wait for the confirmation
