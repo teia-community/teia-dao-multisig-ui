@@ -1,0 +1,124 @@
+/*
+ * Dark mode overrides
+ * Applied when <html data-theme="dark"> is set
+ */
+
+[data-theme="dark"] {
+    $dark-bg:               #1a1a1a;
+    $dark-surface:          #242424;
+    $dark-elevated:         #2d2d2d;
+    $dark-border:           #444444;
+    $dark-text:             #e0e0e0;
+    $dark-muted:            #aaaaaa;
+    $dark-link:             #8888ff;
+    $dark-button-bg:        #333333;
+    $dark-button-hover:     #444444;
+    $dark-yes-vote:         #1a3020;
+    $dark-yes-vote-hover:   #224028;
+    $dark-no-vote:          #3a1a1a;
+
+    body {
+        background-color: $dark-bg;
+        color: $dark-text;
+    }
+
+    a {
+        color: $dark-link;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        color: $dark-muted;
+    }
+
+    footer {
+        background-color: $dark-surface;
+        border-top-color: $dark-border;
+    }
+
+    nav a {
+        color: $dark-muted;
+
+        &:hover, &:focus, &.active {
+            color: $dark-muted;
+            border-bottom-color: $dark-border;
+        }
+    }
+
+    button, input, textarea, .users-list a, .proposal-votes {
+        color: $dark-text;
+        border-color: $dark-border;
+        background-color: $dark-button-bg;
+    }
+
+    button, input[type=submit], .users-list a {
+        background-color: $dark-button-bg;
+
+        &:hover {
+            background-color: $dark-button-hover;
+        }
+    }
+
+    input[type=file] {
+        background-color: $dark-button-bg;
+    }
+
+    a.is-user {
+        background-color: $dark-yes-vote;
+
+        &:hover {
+            background-color: $dark-yes-vote-hover;
+        }
+    }
+
+    section {
+        background-color: $dark-surface;
+        border-color: $dark-border;
+    }
+
+    .proposal-list > li:not(:last-child) {
+        border-bottom-color: $dark-border;
+    }
+
+    .proposal-description {
+        border-left-color: $dark-border;
+    }
+
+    .proposal-id {
+        background-color: $dark-elevated;
+        border-color: $dark-border;
+    }
+
+    .proposal-votes {
+        background-color: $dark-elevated;
+    }
+
+    .yes-vote {
+        background-color: $dark-yes-vote;
+    }
+
+    .no-vote {
+        background-color: $dark-no-vote;
+    }
+
+    details table {
+        background-color: $dark-elevated;
+        border-color: $dark-border;
+    }
+
+    .micheline-code {
+        color: $dark-text;
+        background-color: $dark-elevated;
+        border-color: $dark-border;
+    }
+
+    .users-input-container,
+    .transfer-input {
+        border-color: $dark-border;
+    }
+
+    .information-message,
+    .confirmation-message,
+    .error-message {
+        background-color: $dark-surface;
+    }
+}
