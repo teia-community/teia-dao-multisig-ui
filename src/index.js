@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { HashRouter, Routes, Route } from 'react-router-dom';
-import { App, MultisigParameters, MultisigProposals, CreateProposals, NotFound } from './App';
+import { App, MultisigMembers, MultisigParameters, MultisigProposalDetails, MultisigProposals, CreateProposals, NotFound } from './App';
 import reportWebVitals from './reportWebVitals';
 import './styles/index.scss';
 
@@ -15,6 +15,8 @@ root.render(
                 <Route path='/' element={<App />}>
                     <Route index element={<MultisigParameters />} />
                     <Route path='proposals' element={<MultisigProposals />} />
+                    <Route path='proposals/:proposalId' element={<MultisigProposalDetails />} />
+                    <Route path='members' element={<MultisigMembers />} />
                     <Route path='create' element={<CreateProposals />} />
                     <Route path='*' element={<NotFound />} />
                 </Route>

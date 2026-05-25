@@ -4,7 +4,8 @@ import { MultisigContextProvider } from './containers/context';
 import { Header } from './containers/header';
 import { Footer } from './containers/footer';
 import { Parameters } from './containers/parameters';
-import { Proposals } from './containers/proposals';
+import { MembersDirectory } from './containers/members';
+import { ProposalDetails, Proposals } from './containers/proposals';
 import { CreateProposalForms } from './containers/forms';
 
 function getInitialDarkMode() {
@@ -48,6 +49,23 @@ export function MultisigProposals() {
         <main>
             <h1>Multisig proposals</h1>
             <Proposals />
+        </main>
+    );
+}
+
+export function MultisigProposalDetails() {
+    return (
+        <main>
+            <ProposalDetails />
+        </main>
+    );
+}
+
+export function MultisigMembers() {
+    return (
+        <main>
+            <h1>Multisig members</h1>
+            <MembersDirectory />
         </main>
     );
 }

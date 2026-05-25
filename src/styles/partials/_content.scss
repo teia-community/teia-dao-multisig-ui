@@ -348,3 +348,553 @@ textarea {
         float: right;
     }
 }
+
+.mono-text {
+    font-family: monospace;
+}
+
+.tezos-address {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.4em;
+    align-items: baseline;
+}
+
+.tezos-address-secondary {
+    color: $header-color;
+    font-size: 0.9em;
+}
+
+.nav-badge {
+    display: inline-block;
+    margin-left: $small-gap;
+    padding: 0 0.45em;
+    border: $default-border;
+    border-radius: $big-border-radius;
+    background-color: $yes-vote-background-color;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $small-gap;
+    margin: 0 0 $default-margin 0;
+}
+
+.footer-links__item,
+.dashboard-section__link,
+.proposal-row__open-link,
+.proposal-id-link,
+.detail-card__link,
+.verify-links__item,
+.members-table__proposal-link {
+    display: inline-block;
+    padding: 0.35em 0.7em;
+    border: $default-border;
+    border-radius: $border-radius;
+    font-family: monospace;
+    font-size: 0.95em;
+    text-decoration: none;
+}
+
+.status-strip {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: $small-gap;
+    margin-bottom: $default-margin;
+
+    @media (min-width: $M) {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.status-strip__item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2em;
+    padding: $default-padding;
+    border: $default-border;
+    border-radius: $big-border-radius;
+    background-color: $section-background-color;
+}
+
+.status-strip__label,
+.dashboard-section__subtitle,
+.proposal-row__status-copy,
+.payload-grid__label,
+.detail-card__label,
+.detail-card__message,
+.detail-card__subheader,
+.verify-links__label,
+.members-table__muted,
+.status-strip__extra {
+    color: $header-color;
+}
+
+.status-strip__label,
+.verify-links__label,
+.payload-grid__label,
+.detail-card__label {
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.status-strip__value {
+    font-family: monospace;
+    font-size: 1.05em;
+}
+
+.status-strip__value.is-emphasis {
+    color: darken(green, 15%);
+}
+
+.dashboard-section {
+    margin-bottom: $default-margin;
+}
+
+.dashboard-section__header {
+    display: flex;
+    flex-direction: column;
+    gap: $small-gap;
+    margin-bottom: $default-margin;
+
+    @media (min-width: $M) {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+}
+
+.dashboard-section__header h2 {
+    margin-bottom: 0.2em;
+}
+
+.dashboard-section__subtitle {
+    margin: 0;
+}
+
+.dashboard-section__links,
+.dashboard-section__link,
+.detail-card__links,
+.detail-card__header-actions,
+.detail-card__button-row,
+.verify-links__items,
+.vote-group__items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $small-gap;
+}
+
+.awaiting-section {
+    border-color: lighten(green, 25%);
+    background-color: lighten(green, 68%);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4em;
+    padding: $default-padding;
+    border: $default-border;
+    border-radius: $border-radius;
+    background-color: darken(white, 1%);
+}
+
+.empty-state--success {
+    border-color: lighten(green, 25%);
+}
+
+.proposal-table {
+    display: flex;
+    flex-direction: column;
+}
+
+.proposal-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: $small-gap;
+    padding: $default-padding 0;
+    border-top: $default-border;
+
+    @media (min-width: $M) {
+        grid-template-columns: 12rem 9rem 1fr auto;
+        align-items: start;
+        gap: $default-gap;
+    }
+}
+
+.proposal-row:first-child {
+    border-top: none;
+}
+
+.proposal-row__timestamp,
+.proposal-row__identity,
+.proposal-row__actions,
+.proposal-row__summary,
+.proposal-row__meta,
+.history-summary,
+.proposal-row__vote-state,
+.detail-header__meta,
+.detail-card__stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $small-gap;
+    align-items: center;
+}
+
+.proposal-row__identity,
+.proposal-row__actions {
+    align-items: flex-start;
+}
+
+.proposal-row__summary {
+    line-height: 1.5;
+}
+
+.proposal-row__meta {
+    margin-top: 0.35em;
+}
+
+.proposal-row__actions {
+    justify-content: flex-start;
+
+    @media (min-width: $M) {
+        justify-content: flex-end;
+    }
+}
+
+.proposal-id-link {
+    min-width: 4.5em;
+    text-align: center;
+}
+
+.proposal-row__open-link,
+.proposal-row__history-link,
+.proposal-row__vote-state {
+    font-family: monospace;
+    font-size: 0.95em;
+}
+
+.proposal-row__vote-state {
+    padding: 0.45em 0.7em;
+    border: $default-border;
+    border-radius: $border-radius;
+}
+
+.proposal-row__vote-state.is-yes,
+.history-summary__vote.is-yes,
+.participation-bar__copy strong {
+    color: darken(green, 20%);
+}
+
+.proposal-row__vote-state.is-no,
+.history-summary__vote.is-no,
+.participation-bar__no-copy {
+    color: darken(red, 10%);
+}
+
+.history-summary__yes {
+    color: darken(green, 20%);
+}
+
+.history-summary__no {
+    color: darken(red, 10%);
+}
+
+.kind-badge {
+    display: inline-block;
+    min-width: 4.2em;
+    padding: 0.25em 0.5em;
+    border: $default-border;
+    border-radius: $border-radius;
+    font-family: monospace;
+    font-size: 0.85em;
+    text-align: center;
+    background-color: darken(white, 2%);
+}
+
+.kind-badge--text,
+.kind-badge--expiration-time,
+.kind-badge--minimum-votes {
+    background-color: lighten(blue, 42%);
+}
+
+.kind-badge--add-user,
+.kind-badge--remove-user {
+    background-color: lighten(green, 62%);
+}
+
+.kind-badge--remove-user {
+    background-color: lighten(red, 38%);
+}
+
+.kind-badge--transfer-mutez,
+.kind-badge--transfer-token,
+.kind-badge--lambda-function {
+    background-color: lighten(orange, 30%);
+}
+
+.quorum-bar,
+.participation-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $small-gap;
+    font-family: monospace;
+    font-size: 0.95em;
+}
+
+.quorum-bar__track,
+.participation-bar__track {
+    position: relative;
+    flex: 0 0 14rem;
+    height: 0.55rem;
+    border: $default-border;
+    border-radius: $border-radius;
+    overflow: hidden;
+    background-color: darken(white, 2%);
+}
+
+.quorum-bar__yes,
+.quorum-bar__no,
+.participation-bar__yes,
+.participation-bar__no {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+}
+
+.quorum-bar__yes,
+.participation-bar__yes {
+    left: 0;
+    background-color: darken(green, 15%);
+}
+
+.quorum-bar__yes.is-ready {
+    background-color: darken(green, 25%);
+}
+
+.quorum-bar__no,
+.participation-bar__no {
+    background-color: darken(red, 5%);
+    opacity: 0.7;
+}
+
+.quorum-bar__summary.is-ready {
+    color: darken(green, 20%);
+}
+
+.proposal-detail__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: $default-gap;
+
+    @media (min-width: $M) {
+        grid-template-columns: minmax(0, 2fr) minmax(19rem, 1fr);
+        align-items: start;
+    }
+}
+
+.proposal-detail__main,
+.proposal-detail__sidebar,
+.vote-groups,
+.payload-list,
+.detail-card__stack {
+    display: flex;
+    flex-direction: column;
+    gap: $default-gap;
+}
+
+.detail-header {
+    margin-bottom: $default-margin;
+}
+
+.detail-header__crumbs,
+.detail-header__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $small-gap;
+    margin-bottom: $small-margin;
+}
+
+.detail-card {
+    border: $default-border;
+    border-radius: $big-border-radius;
+    background-color: darken(white, 2%);
+    overflow: hidden;
+}
+
+.detail-card__header,
+.detail-card__subheader {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: $small-gap;
+    padding: $default-padding;
+    border-bottom: $default-border;
+}
+
+.detail-card__title {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2em;
+}
+
+.detail-card__content {
+    margin: 0;
+    padding: $default-padding;
+    font-family: monospace;
+    font-size: 0.95em;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: auto;
+}
+
+.detail-card__message,
+.detail-card__stack,
+.verify-links {
+    padding: $default-padding;
+}
+
+.detail-card__message {
+    margin: 0;
+}
+
+.detail-card__message--error {
+    color: darken(red, 10%);
+}
+
+.detail-card__variant,
+.detail-card__cid {
+    word-break: break-word;
+}
+
+.inline-button {
+    min-width: auto;
+    padding: 0.3em 0.65em;
+    font-size: 0.95em;
+}
+
+.inline-button.is-active {
+    border-color: darken(green, 15%);
+}
+
+.payload-grid {
+    display: grid;
+    grid-template-columns: minmax(8rem, 12rem) 1fr;
+    gap: $small-gap $default-gap;
+    padding: $default-padding;
+    align-items: start;
+}
+
+.payload-grid__value {
+    min-width: 0;
+}
+
+.verify-links {
+    border: $default-border;
+    border-radius: $big-border-radius;
+    background-color: darken(white, 2%);
+}
+
+.vote-group {
+    padding: $default-padding;
+    border-top: $default-border;
+}
+
+.vote-group:first-child {
+    border-top: none;
+}
+
+.vote-group__header {
+    display: flex;
+    justify-content: space-between;
+    font-family: monospace;
+    margin-bottom: $small-gap;
+}
+
+.vote-pill {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35em;
+    padding: 0.25em 0.6em;
+    border: $default-border;
+    border-radius: $big-border-radius;
+    font-family: monospace;
+    font-size: 0.95em;
+    background-color: darken(white, 2%);
+}
+
+.vote-pill--yes {
+    background-color: $yes-vote-background-color;
+}
+
+.vote-pill--no {
+    background-color: $no-vote-background-color;
+}
+
+.vote-pill__op {
+    padding-left: 0.35em;
+    border-left: $default-border;
+}
+
+.members-table {
+    display: flex;
+    flex-direction: column;
+    gap: $small-gap;
+}
+
+.members-table__head,
+.members-table__row {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr;
+    gap: $small-gap $default-gap;
+    align-items: center;
+
+    @media (min-width: $M) {
+        grid-template-columns: 2.5rem minmax(10rem, 1fr) minmax(12rem, 1.2fr) minmax(16rem, 1.6fr) 7rem 4rem;
+    }
+}
+
+.members-table__head {
+    padding: 0 $small-padding $small-padding;
+    font-family: monospace;
+    font-size: 0.9em;
+    color: $header-color;
+}
+
+.members-table__row {
+    padding: $default-padding 0;
+    border-top: $default-border;
+}
+
+.members-table__row.is-user {
+    background-color: lighten(green, 67%);
+    border-radius: $border-radius;
+    padding-left: $small-padding;
+    padding-right: $small-padding;
+}
+
+.members-table__member {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35em;
+    align-items: baseline;
+}
+
+.member-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--avatar-size);
+    height: var(--avatar-size);
+    border-radius: 999px;
+    border: $default-border;
+    background: hsl(var(--avatar-hue), 30%, 72%);
+    font-family: monospace;
+    font-size: 0.85em;
+}

@@ -1,317 +1,686 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { Parser, emitMicheline } from '@taquito/michel-codec';
-import { encodeKey } from '@taquito/utils';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { TOKENS } from '../constants';
+import { CopyButton, KindBadge, ProposalIdLink, ProposalSummary, QuorumBar, VerifyLinks, VotePill, useIpfsText } from './dashboard-components';
 import { MultisigContext } from './context';
-import { Button } from './button';
-import { TezosAddressLink, TokenLink, IpfsLink } from './links';
-import { hexToString } from './utils';
+import { DefaultLink, TezosAddressLink, TokenLink } from './links';
+import {
+    buildBigmapLink,
+    buildContractLink,
+    buildContractOperationsLink,
+    buildIpfsGatewayLink,
+    buildOperationLink,
+    buildProposalRecords,
+    buildVoteOperationsLink,
+    formatMutezAmount,
+    formatRelativeTime,
+    formatTimestamp,
+    IPFS_GATEWAYS,
+    PROPOSAL_KIND_METADATA,
+} from './utils';
 
+
+function useProposalData() {
+    const context = useContext(MultisigContext);
+    const proposalRecords = buildProposalRecords({
+        storage: context.storage,
+        proposals: context.proposals,
+        voteRecords: context.voteRecords,
+        proposalOperations: context.proposalOperations,
+        voteOperations: context.voteOperations,
+        executeOperations: context.executeOperations,
+        storageHistory: context.storageHistory,
+        userAddress: context.userAddress,
+    });
+
+    return { ...context, proposalRecords };
+}
+
+function ProposalSection({ title, subtitle, links, children, className = '' }) {
+    return (
+        <section className={`dashboard-section ${className}`.trim()}>
+            <div className='dashboard-section__header'>
+                <div>
+                    <h2>{title}</h2>
+                    {subtitle && <p className='dashboard-section__subtitle'>{subtitle}</p>}
+                </div>
+                {links && links.length > 0 && (
+                    <div className='dashboard-section__links'>
+                        {links.map(link => (
+                            <DefaultLink key={`${link.label}-${link.href}`} href={link.href} className='dashboard-section__link'>
+                                {link.label}
+                            </DefaultLink>
+                        ))}
+                    </div>
+                )}
+            </div>
+            {children}
+        </section>
+    );
+}
+
+function LoadingState() {
+    return (
+        <section className='dashboard-section'>
+            <p>Loading proposals from TzKT...</p>
+        </section>
+    );
+}
+
+function EmptyState({ title, copy, className = '' }) {
+    return (
+        <div className={`empty-state ${className}`.trim()}>
+            <strong>{title}</strong>
+            <span>{copy}</span>
+        </div>
+    );
+}
+
+function StatusStrip({ contractAddress, storage, proposalRecords, awaitingCount }) {
+    const activeCount = proposalRecords.filter(proposalRecord => proposalRecord.status === 'open').length;
+    const items = [
+        {
+            label: 'contract',
+            value: contractAddress,
+            extra: 'verify on TzKT',
+            href: buildContractLink(contractAddress),
+        },
+        {
+            label: 'members',
+            value: storage?.users?.length || 0,
+            extra: `quorum ${storage?.minimum_votes || 0}`,
+        },
+        {
+            label: 'awaiting you',
+            value: awaitingCount,
+            extra: awaitingCount > 0 ? 'vote outstanding' : 'all caught up',
+            emphasis: awaitingCount > 0,
+        },
+        {
+            label: 'active',
+            value: activeCount,
+            extra: `${proposalRecords.filter(proposalRecord => proposalRecord.canExecute).length} executable`,
+        },
+    ];
+
+    return (
+        <section className='status-strip'>
+            {items.map(item => (
+                <div key={item.label} className='status-strip__item'>
+                    <span className='status-strip__label'>{item.label}</span>
+                    {item.href ? (
+                        <DefaultLink href={item.href} className='status-strip__value'>
+                            {item.value}
+                        </DefaultLink>
+                    ) : (
+                        <span className={`status-strip__value${item.emphasis ? ' is-emphasis' : ''}`}>
+                            {item.value}
+                        </span>
+                    )}
+                    <span className='status-strip__extra'>{item.extra}</span>
+                </div>
+            ))}
+        </section>
+    );
+}
+
+function ProposalRow({ contractAddress, isUser, minimumVotes, proposalRecord, onExecute, onVote }) {
+    const navigate = useNavigate();
+
+    return (
+        <div
+            className={`proposal-row${proposalRecord.status !== 'open' ? ' is-history' : ''}`}
+            onClick={event => {
+                if (event.target.closest('a,button')) {
+                    return;
+                }
+
+                navigate(`/proposals/${proposalRecord.id}`);
+            }}>
+            <div className='proposal-row__timestamp mono-text'>{formatTimestamp(proposalRecord.createdAt)}</div>
+            <div className='proposal-row__identity'>
+                <ProposalIdLink proposalId={proposalRecord.id} contractAddress={contractAddress} />
+                <KindBadge kind={proposalRecord.kind} />
+            </div>
+            <div className='proposal-row__body'>
+                <div className='proposal-row__summary'>
+                    <span onClick={event => event.stopPropagation()}>
+                        <TezosAddressLink address={proposalRecord.proposal.issuer} useAlias shorten />
+                    </span>
+                    <span> proposed to </span>
+                    <ProposalSummary proposalRecord={proposalRecord} />
+                </div>
+                <div className='proposal-row__meta'>
+                    {proposalRecord.status === 'open' ? (
+                        <>
+                            <QuorumBar
+                                yesCount={proposalRecord.yesVoters.length}
+                                noCount={proposalRecord.noVoters.length}
+                                pendingCount={proposalRecord.pendingVoters.length}
+                                threshold={minimumVotes}
+                            />
+                            <span className='proposal-row__status-copy'>expires {formatRelativeTime(proposalRecord.expiresAt)}</span>
+                        </>
+                    ) : (
+                        <ExecutedSummary proposalRecord={proposalRecord} />
+                    )}
+                </div>
+            </div>
+            <div className='proposal-row__actions'>
+                {proposalRecord.status === 'open' && proposalRecord.canExecute && isUser && (
+                    <button onClick={() => onExecute(proposalRecord.id)}>execute</button>
+                )}
+
+                {proposalRecord.status === 'open' && isUser && proposalRecord.userVote === undefined && (
+                    <>
+                        <button onClick={() => onVote(proposalRecord.id, true)}>YES</button>
+                        <button onClick={() => onVote(proposalRecord.id, false)}>NO</button>
+                    </>
+                )}
+
+                {proposalRecord.status === 'open' && proposalRecord.userVote !== undefined && (
+                    <span className={`proposal-row__vote-state${proposalRecord.userVote ? ' is-yes' : ' is-no'}`}>
+                        you voted {proposalRecord.userVote ? 'YES' : 'NO'}
+                    </span>
+                )}
+
+                {proposalRecord.status === 'executed' && proposalRecord.executeOperation && (
+                    <DefaultLink href={buildOperationLink(proposalRecord.executeOperation.hash)} className='proposal-row__history-link'>
+                        executed {formatRelativeTime(proposalRecord.executedAt)}
+                    </DefaultLink>
+                )}
+
+                {proposalRecord.status === 'expired' && (
+                    <span className='proposal-row__history-link'>expired {formatRelativeTime(proposalRecord.expiresAt)}</span>
+                )}
+
+                <Link to={`/proposals/${proposalRecord.id}`} className='proposal-row__open-link'>
+                    open
+                </Link>
+            </div>
+        </div>
+    );
+}
+
+function ExecutedSummary({ proposalRecord }) {
+    return (
+        <div className='history-summary'>
+            <span className='history-summary__yes'>{proposalRecord.yesVoters.length} yes</span>
+            <span className='history-summary__no'>{proposalRecord.noVoters.length} no</span>
+            <span className='history-summary__pending'>{proposalRecord.pendingVoters.length} abstain</span>
+            {proposalRecord.userVote !== undefined && (
+                <span className={`history-summary__vote${proposalRecord.userVote ? ' is-yes' : ' is-no'}`}>
+                    you: {proposalRecord.userVote ? 'YES' : 'NO'}
+                </span>
+            )}
+        </div>
+    );
+}
+
+function AwaitingYouSection({ contractAddress, isUser, minimumVotes, proposals, onExecute, onVote, userAddress }) {
+    if (!userAddress) {
+        return (
+            <ProposalSection title='Awaiting your vote' subtitle='Connect a multisig wallet to personalize this queue.' className='awaiting-section'>
+                <EmptyState title='Wallet not connected' copy='Sync the wallet used for multisig voting to see the proposals that still need you.' />
+            </ProposalSection>
+        );
+    }
+
+    if (!isUser) {
+        return null;
+    }
+
+    return (
+        <ProposalSection
+            title='Awaiting your vote'
+            subtitle={proposals.length > 0 ? `${proposals.length} proposal${proposals.length === 1 ? '' : 's'} still need your vote.` : undefined}
+            className='awaiting-section'>
+            {proposals.length === 0 ? (
+                <EmptyState title='All caught up' copy='You have already handled every currently open proposal.' className='empty-state--success' />
+            ) : (
+                <div className='proposal-table'>
+                    {proposals.map(proposalRecord => (
+                        <ProposalRow
+                            key={proposalRecord.id}
+                            contractAddress={contractAddress}
+                            isUser={isUser}
+                            minimumVotes={minimumVotes}
+                            proposalRecord={proposalRecord}
+                            onExecute={onExecute}
+                            onVote={onVote}
+                        />
+                    ))}
+                </div>
+            )}
+        </ProposalSection>
+    );
+}
 
 export function Proposals() {
-    // Get the required multisig context information
-    const { storage, proposals } = useContext(MultisigContext);
+    const { contractAddress, executeProposal, proposalRecords, proposalOperations, proposals, storage, userAddress, voteOperations, voteProposal, voteRecords } = useProposalData();
 
-    // Separate the proposals between executed, expired and active proposals
-    const executedProposals = [];
-    const expiredProposals = [];
-    const activeProposals = [];
-
-    if (storage && proposals) {
-        // Get the expiration time parameter from the storage
-        const expirationTime = parseInt(storage.expiration_time);
-
-        // Loop over the complete list of proposals
-        const now = new Date();
-
-        for (const proposal of proposals) {
-            if (proposal.value.executed) {
-                executedProposals.push(proposal);
-            } else {
-                // Check if the proposal has expired
-                const expirationDate = new Date(proposal.value.timestamp);
-                expirationDate.setDate(expirationDate.getDate() + expirationTime);
-
-                if (now > expirationDate) {
-                    expiredProposals.push(proposal);
-                } else {
-                    activeProposals.push(proposal);
-                }
-            }
-        }
+    if (!(storage && proposals && voteRecords && proposalOperations && voteOperations)) {
+        return <LoadingState />;
     }
+
+    const isUser = storage.users.includes(userAddress);
+    const minimumVotes = Number(storage.minimum_votes || 0);
+    const awaitingProposals = proposalRecords.filter(proposalRecord => proposalRecord.isAwaitingUser);
+    const activeProposals = proposalRecords.filter(proposalRecord => proposalRecord.status === 'open' && !proposalRecord.isAwaitingUser);
+    const executedProposals = proposalRecords.filter(proposalRecord => proposalRecord.status === 'executed');
+    const expiredProposals = proposalRecords.filter(proposalRecord => proposalRecord.status === 'expired');
 
     return (
         <>
-            <section>
-                <h2>Active proposals</h2>
-                <ProposalList proposals={activeProposals} active />
-            </section>
-
-            <section>
-                <h2>Executed proposals</h2>
-                <ProposalList proposals={executedProposals} />
-            </section>
-
-            <section>
-                <h2>Expired proposals</h2>
-                <ProposalList proposals={expiredProposals} />
-            </section>
-        </>
-    );
-}
-
-function ProposalList(props) {
-    return (
-        <ul className='proposal-list'>
-            {props.proposals.map(proposal => (
-                <li key={proposal.key}>
-                    <Proposal
-                        proposalId={proposal.key}
-                        proposal={proposal.value}
-                        active={props.active}
-                    />
-                </li>
-            ))}
-        </ul>
-    );
-}
-
-function Proposal(props) {
-    return (
-        <div className='proposal'>
-            <ProposalTimestamp timestamp={props.proposal.timestamp} />
-            <ProposalDescription
-                id={props.proposalId}
-                proposal={props.proposal} />
-            <ProposalActions
-                id={props.proposalId}
-                positiveVotes={props.proposal.positive_votes}
-                active={props.active}
+            <StatusStrip
+                contractAddress={contractAddress}
+                storage={storage}
+                proposalRecords={proposalRecords}
+                awaitingCount={awaitingProposals.length}
             />
-        </div>
-    );
-}
 
-function ProposalTimestamp(props) {
-    return (
-        <span className='proposal-timestamp'>{props.timestamp}</span>
-    );
-}
+            <AwaitingYouSection
+                contractAddress={contractAddress}
+                isUser={isUser}
+                minimumVotes={minimumVotes}
+                proposals={awaitingProposals}
+                onExecute={executeProposal}
+                onVote={voteProposal}
+                userAddress={userAddress}
+            />
 
-function ProposalDescription(props) {
-    return (
-        <div className='proposal-description'>
-            <ProposalDescriptionIntro id={props.id} issuer={props.proposal.issuer} />
-            {' '}
-            <ProposalDescriptionContent proposal={props.proposal} />
-        </div>
-    );
-}
+            <ProposalSection title='Active proposals' subtitle='Open proposals that are no longer waiting on your vote.'>
+                {activeProposals.length === 0 ? (
+                    <EmptyState title='No other active proposals' copy='Every open proposal is either already handled or is waiting in the queue above.' />
+                ) : (
+                    <div className='proposal-table'>
+                        {activeProposals.map(proposalRecord => (
+                            <ProposalRow
+                                key={proposalRecord.id}
+                                contractAddress={contractAddress}
+                                isUser={isUser}
+                                minimumVotes={minimumVotes}
+                                proposalRecord={proposalRecord}
+                                onExecute={executeProposal}
+                                onVote={voteProposal}
+                            />
+                        ))}
+                    </div>
+                )}
+            </ProposalSection>
 
-function ProposalDescriptionIntro(props) {
-    return (
-        <>
-            <span className='proposal-id'>#{props.id}</span>
-            <span>
-                <TezosAddressLink address={props.issuer} useAlias shorten /> proposed to
-            </span>
+            <ProposalSection
+                title='Executed proposals'
+                subtitle='Past proposals retain their full yes / no / abstain breakdown.'
+                links={[{ label: 'full history on TzKT', href: buildContractOperationsLink(contractAddress) }]}>
+                {executedProposals.length === 0 ? (
+                    <EmptyState title='Nothing executed yet' copy='Executed proposals will appear here with their final vote breakdowns and execution operations.' />
+                ) : (
+                    <div className='proposal-table'>
+                        {executedProposals.map(proposalRecord => (
+                            <ProposalRow
+                                key={proposalRecord.id}
+                                contractAddress={contractAddress}
+                                isUser={false}
+                                minimumVotes={minimumVotes}
+                                proposalRecord={proposalRecord}
+                                onExecute={executeProposal}
+                                onVote={voteProposal}
+                            />
+                        ))}
+                    </div>
+                )}
+            </ProposalSection>
+
+            <ProposalSection title='Expired proposals' subtitle='These proposals can no longer be executed or voted on.'>
+                {expiredProposals.length === 0 ? (
+                    <EmptyState title='No expired proposals' copy='Open proposals that miss quorum before expiry will show up here.' />
+                ) : (
+                    <div className='proposal-table'>
+                        {expiredProposals.map(proposalRecord => (
+                            <ProposalRow
+                                key={proposalRecord.id}
+                                contractAddress={contractAddress}
+                                isUser={false}
+                                minimumVotes={minimumVotes}
+                                proposalRecord={proposalRecord}
+                                onExecute={executeProposal}
+                                onVote={voteProposal}
+                            />
+                        ))}
+                    </div>
+                )}
+            </ProposalSection>
         </>
     );
 }
 
-function ProposalDescriptionContent(props) {
-    // Write a different proposal description depending of the proposal kind
-    const proposal = props.proposal;
+function IpfsPanel({ cid }) {
+    const [showRaw, setShowRaw] = useState(false);
+    const { error, gateway, status, text, truncated } = useIpfsText(cid);
 
-    if (proposal.kind.text) {
-        // Try to extract an ipfs path from the proposal text
-        const text = hexToString(proposal.text);
-        const ipfsPath = text.split('/')[2];
+    return (
+        <div className='detail-card'>
+            <div className='detail-card__header'>
+                <div className='detail-card__title'>
+                    <span className='detail-card__label'>IPFS</span>
+                    <span className='detail-card__cid mono-text'>{cid}</span>
+                </div>
+                <div className='detail-card__header-actions'>
+                    <CopyButton value={cid} text='copy cid' />
+                    <button className={`inline-button${showRaw ? '' : ' is-active'}`} onClick={() => setShowRaw(false)}>text</button>
+                    <button className={`inline-button${showRaw ? ' is-active' : ''}`} onClick={() => setShowRaw(true)}>raw</button>
+                </div>
+            </div>
 
-        return (
-            <span>
-                approve a <IpfsLink path={ipfsPath ? ipfsPath : ''}>text proposal</IpfsLink>.
-            </span>
-        );
-    } else if (proposal.kind.transfer_mutez) {
-        // Extract the transfers information
-        const transfers = proposal.mutez_transfers;
-        const totalAmount = transfers.reduce((previous, current) => previous + parseInt(current.amount), 0);
+            <div className='detail-card__subheader'>
+                <span>gateways</span>
+                <div className='detail-card__links'>
+                    {IPFS_GATEWAYS.map(currentGateway => (
+                        <DefaultLink key={currentGateway} href={buildIpfsGatewayLink(cid, currentGateway)} className={`detail-card__link${gateway === currentGateway ? ' is-active' : ''}`}>
+                            {currentGateway}
+                        </DefaultLink>
+                    ))}
+                </div>
+            </div>
 
-        if (transfers.length === 1) {
-            return (
-                <span>
-                    transfer {transfers[0].amount / 1000000} ꜩ to <TezosAddressLink address={transfers[0].destination} useAlias shorten />.
-                </span>
-            );
-        } else {
-            return (
+            {status === 'loading' && <p className='detail-card__message'>Fetching text from public gateways...</p>}
+
+            {status === 'error' && (
+                <div className='detail-card__message detail-card__message--error'>
+                    <p>Public gateways did not return readable text in time.</p>
+                    <span>{error}</span>
+                </div>
+            )}
+
+            {status === 'ok' && (
                 <>
-                    <span>
-                        transfer {totalAmount / 1000000} ꜩ.
-                    </span>
-                    <details>
-                        <summary>See transfer details</summary>
-                        <table>
-                            <tbody>
-                                {transfers.map((transfer, index) => (
-                                    <tr key={index}>
-                                        <td>
-                                            {transfer.amount / 1000000} ꜩ to
-                                        </td>
-                                        <td>
-                                            <TezosAddressLink address={transfer.destination} useAlias shorten />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </details>
+                    <div className='detail-card__subheader'>
+                        <span>{gateway ? `fetched from ${gateway}` : 'gateway race complete'}</span>
+                        {truncated && <span>truncated at 100KB</span>}
+                    </div>
+                    <pre className='detail-card__content'>{showRaw ? text : text.trim()}</pre>
                 </>
-            );
-        }
-    } else if (proposal.kind.transfer_token) {
-        // Extract the transfers information
-        const fa2 = proposal.token_transfers.fa2;
-        const tokenId = proposal.token_transfers.token_id;
-        const transfers = proposal.token_transfers.distribution;
-        const nEditions = transfers.reduce((previous, current) => previous + parseInt(current.amount), 0);
-        const token = TOKENS.find(token => token.fa2 === fa2);
-
-        if (transfers.length === 1) {
-            return (
-                <span>
-                    transfer {token ? transfers[0].amount / token.decimals : transfers[0].amount}
-                    {' '}
-                    {token?.multiasset ? `edition${transfers[0].amount > 1 ? 's' : ''} of token` : ''}
-                    {' '}
-                    <TokenLink fa2={fa2} id={tokenId}>
-                        {token ? (token.multiasset ? '#' + tokenId : token.name) : 'tokens'}
-                    </TokenLink>
-                    {' '}
-                    to <TezosAddressLink address={transfers[0].destination} useAlias shorten />.
-                </span>
-            );
-        } else {
-            return (
-                <>
-                    <span>
-                        transfer {token ? nEditions / token.decimals : nEditions}
-                        {' '}
-                        {token?.multiasset ? 'editions of token' : ''}
-                        {' '}
-                        <TokenLink fa2={fa2} id={tokenId}>
-                            {token ? (token.multiasset ? '#' + tokenId : token.name) : 'tokens'}
-                        </TokenLink>.
-                    </span>
-                    <details>
-                        <summary>See transfer details</summary>
-                        <table>
-                            <tbody>
-                                {transfers.map((transfer, index) => (
-                                    <tr key={index}>
-                                        <td>
-                                            {token ? transfer.amount / token.decimals : transfer.amount}
-                                            {' '}
-                                            {token?.multiasset ? `edition${transfer.amount > 1 ? 's' : ''}` : ''} to
-                                        </td>
-                                        <td>
-                                            <TezosAddressLink address={transfer.destination} useAlias shorten />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </details>
-                </>
-            );
-        }
-    } else if (proposal.kind.add_user) {
-        return (
-            <span>
-                add <TezosAddressLink address={proposal.user} useAlias shorten /> to the multisig.
-            </span>
-        );
-    } else if (proposal.kind.remove_user) {
-        return (
-            <span>
-                remove <TezosAddressLink address={proposal.user} useAlias shorten /> from the multisig.
-            </span>
-        );
-    } else if (proposal.kind.minimum_votes) {
-        return (
-            <span>
-                change the minimum positive votes required to approve a proposal to {proposal.minimum_votes} votes.
-            </span>
-        );
-    } else if (proposal.kind.expiration_time) {
-        return (
-            <span>
-                change the proposals expiration time to {proposal.expiration_time} days.
-            </span>
-        );
-    } else {
-        // Transform the lambda function Michelson JSON code to Micheline code
-        const parser = new Parser();
-        const michelsonCode = parser.parseJSON(JSON.parse(proposal.lambda_function));
-        const michelineCode = emitMicheline(michelsonCode, { indent: '    ', newline: '\n', });
-
-        // Encode any addresses that the Micheline code might contain
-        const encodedMichelineCode = michelineCode.replace(
-            /0x0[0123]{1}[\w\d]{42}/g,
-            (match) => `"${encodeKey(match.slice(2))}"`
-        );
-
-        return (
-            <>
-                <span>
-                    execute a lambda function.
-                </span>
-                <details>
-                    <summary>See Micheline code</summary>
-                    <pre className='micheline-code'>
-                        {encodedMichelineCode}
-                    </pre>
-                </details>
-            </>
-        );
-    }
+            )}
+        </div>
+    );
 }
 
-function ProposalActions(props) {
-    // Get the required multisig context information
-    const { userAddress, storage, userVotes, voteProposal, executeProposal } = useContext(MultisigContext);
+function PayloadCard({ proposalRecord }) {
+    const proposal = proposalRecord.proposal;
+    const token = proposal.kind.transfer_token ? TOKENS.find(currentToken => currentToken.fa2 === proposal.token_transfers.fa2) : undefined;
+    let rows;
 
-    // Check if the connected user is a multisig user
-    const isUser = storage?.users.includes(userAddress);
+    if (proposalRecord.kind === 'transfer_mutez') {
+        rows = proposal.mutez_transfers.map((transfer, index) => ({
+            label: proposal.mutez_transfers.length > 1 ? `transfer ${index + 1}` : 'transfer',
+            value: (
+                <>
+                    <span className='mono-text'>{formatMutezAmount(transfer.amount)} XTZ</span>
+                    {' to '}
+                    <TezosAddressLink address={transfer.destination} useAlias shorten />
+                </>
+            )
+        }));
+    } else if (proposalRecord.kind === 'transfer_token') {
+        rows = [
+            { label: 'token contract', value: <TokenLink fa2={proposal.token_transfers.fa2} id={proposal.token_transfers.token_id}>{token?.name || proposal.token_transfers.fa2}</TokenLink> },
+            { label: 'token id', value: <span className='mono-text'>{proposal.token_transfers.token_id}</span> },
+            {
+                label: 'distribution',
+                value: (
+                    <div className='payload-list'>
+                        {proposal.token_transfers.distribution.map((transfer, index) => (
+                            <span key={`${transfer.destination}-${index}`}>
+                                <span className='mono-text'>{Number(transfer.amount).toLocaleString('en-US')}</span>
+                                {' to '}
+                                <TezosAddressLink address={transfer.destination} useAlias shorten />
+                            </span>
+                        ))}
+                    </div>
+                )
+            }
+        ];
+    } else if (proposalRecord.kind === 'add_user' || proposalRecord.kind === 'remove_user') {
+        rows = [{ label: 'member', value: <TezosAddressLink address={proposal.user} useAlias shorten /> }];
+    } else if (proposalRecord.kind === 'minimum_votes') {
+        rows = [{ label: 'new threshold', value: <span className='mono-text'>{proposal.minimum_votes}</span> }];
+    } else if (proposalRecord.kind === 'expiration_time') {
+        rows = [{ label: 'new expiration', value: <span className='mono-text'>{proposal.expiration_time} days</span> }];
+    } else {
+        let micheline = 'No lambda payload available.';
 
-    // Check if the proposal can be executed
-    const canExecute = parseInt(props.positiveVotes) >= parseInt(storage?.minimum_votes);
+        try {
+            const parser = new Parser();
+            const lambdaFunction = typeof proposal.lambda_function === 'string'
+                ? JSON.parse(proposal.lambda_function)
+                : proposal.lambda_function;
+            const michelineJson = parser.parseJSON(lambdaFunction);
+            micheline = emitMicheline(michelineJson, { indent: '    ', newline: '\n' });
+        } catch (error) {
+            micheline = JSON.stringify(proposal.lambda_function, null, 2) || micheline;
+        }
 
-    // Get the vote class name
-    const userVote = userVotes && userVotes[props.id];
-    let voteClassName = '';
-
-    if (userVote !== undefined) {
-        voteClassName = userVote ? ' yes-vote' : ' no-vote';
+        rows = [{ label: 'lambda', value: <pre className='micheline-code'>{micheline}</pre> }];
     }
 
     return (
-        <div className='proposal-extra-information'>
-            {props.active && isUser && canExecute &&
-                <Button text='execute' onClick={() => executeProposal(props.id)} />
-            }
-
-            <span className={'proposal-votes' + voteClassName}>{props.positiveVotes}</span>
-
-            {props.active && isUser &&
-                <Button text='YES' onClick={() => voteProposal(props.id, true)} />
-            }
-
-            {props.active && isUser &&
-                <Button text='NO' onClick={() => voteProposal(props.id, false)} />
-            }
+        <div className='detail-card'>
+            <div className='detail-card__header'>
+                <div className='detail-card__title'>
+                    <span className='detail-card__label'>Payload</span>
+                    <span>{PROPOSAL_KIND_METADATA[proposalRecord.kind]?.label || proposalRecord.kind}</span>
+                </div>
+                <span className='detail-card__variant mono-text'>{proposalRecord.variantTag}</span>
+            </div>
+            <div className='payload-grid'>
+                {rows.map(row => (
+                    <>
+                        <span className='payload-grid__label'>{row.label}</span>
+                        <div className='payload-grid__value'>{row.value}</div>
+                    </>
+                ))}
+            </div>
         </div>
+    );
+}
+
+function YourVoteCard({ isUser, proposalRecord, userAddress, onExecute, onVote }) {
+    const voteOperation = userAddress ? proposalRecord.voteOperations[userAddress] : undefined;
+
+    return (
+        <div className='detail-card'>
+            <div className='detail-card__header'>
+                <div className='detail-card__title'>
+                    <span className='detail-card__label'>Your vote</span>
+                    {proposalRecord.userVote !== undefined ? (
+                        <span className={`proposal-row__vote-state${proposalRecord.userVote ? ' is-yes' : ' is-no'}`}>
+                            {proposalRecord.userVote ? 'YES' : 'NO'}
+                        </span>
+                    ) : (
+                        <span className='proposal-row__status-copy'>not cast yet</span>
+                    )}
+                </div>
+                {voteOperation && (
+                    <DefaultLink href={buildOperationLink(voteOperation.hash)} className='detail-card__link'>
+                        vote op
+                    </DefaultLink>
+                )}
+            </div>
+
+            {proposalRecord.status !== 'open' && <p className='detail-card__message'>Voting is closed for this proposal.</p>}
+
+            {proposalRecord.status === 'open' && !userAddress && <p className='detail-card__message'>Connect a wallet to vote or execute.</p>}
+
+            {proposalRecord.status === 'open' && userAddress && !isUser && <p className='detail-card__message'>The connected wallet is not currently a multisig member.</p>}
+
+            {proposalRecord.status === 'open' && isUser && (
+                <div className='detail-card__button-row'>
+                    <button onClick={() => onVote(proposalRecord.id, true)}>vote YES</button>
+                    <button onClick={() => onVote(proposalRecord.id, false)}>vote NO</button>
+                    {proposalRecord.canExecute && <button onClick={() => onExecute(proposalRecord.id)}>execute</button>}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function VoteBreakdown({ proposalRecord }) {
+    const groups = [
+        { label: 'YES', vote: 'yes', addresses: [...proposalRecord.yesVoters].sort() },
+        { label: 'NO', vote: 'no', addresses: [...proposalRecord.noVoters].sort() },
+        { label: proposalRecord.status === 'open' ? 'NOT VOTED' : 'ABSTAIN', addresses: [...proposalRecord.pendingVoters].sort() },
+    ];
+
+    return (
+        <div className='detail-card'>
+            <div className='detail-card__header'>
+                <div className='detail-card__title'>
+                    <span className='detail-card__label'>Voters</span>
+                    <span>{proposalRecord.yesVoters.length + proposalRecord.noVoters.length} recorded votes</span>
+                </div>
+            </div>
+            <div className='vote-groups'>
+                {groups.map(group => (
+                    <div key={group.label} className='vote-group'>
+                        <div className='vote-group__header'>
+                            <span>{group.label}</span>
+                            <span>{group.addresses.length}</span>
+                        </div>
+                        {group.addresses.length === 0 ? (
+                            <span className='detail-card__message'>None</span>
+                        ) : (
+                            <div className='vote-group__items'>
+                                {group.addresses.map(address => (
+                                    <VotePill
+                                        key={`${group.label}-${address}`}
+                                        address={address}
+                                        operation={proposalRecord.voteOperations[address]}
+                                        vote={group.vote}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function ProvenanceCard({ contractAddress, proposalRecord, storage }) {
+    return (
+        <div className='detail-card'>
+            <div className='detail-card__header'>
+                <div className='detail-card__title'>
+                    <span className='detail-card__label'>Provenance</span>
+                    <span>chain references</span>
+                </div>
+            </div>
+            <div className='detail-card__stack'>
+                <div>
+                    proposed by <TezosAddressLink address={proposalRecord.proposal.issuer} useAlias shorten />
+                </div>
+                {proposalRecord.proposalOperation && (
+                    <DefaultLink href={buildOperationLink(proposalRecord.proposalOperation.hash)} className='detail-card__link'>
+                        creation op {proposalRecord.proposalOperation.hash}
+                    </DefaultLink>
+                )}
+                {proposalRecord.executeOperation && (
+                    <DefaultLink href={buildOperationLink(proposalRecord.executeOperation.hash)} className='detail-card__link'>
+                        execute op {proposalRecord.executeOperation.hash}
+                    </DefaultLink>
+                )}
+                <DefaultLink href={buildBigmapLink(storage.proposals, contractAddress)} className='detail-card__link'>
+                    proposals bigmap {storage.proposals}
+                </DefaultLink>
+                <DefaultLink href={buildBigmapLink(storage.votes, contractAddress)} className='detail-card__link'>
+                    votes bigmap {storage.votes}
+                </DefaultLink>
+            </div>
+        </div>
+    );
+}
+
+function ProposalVerifyFooter({ contractAddress, proposalRecord, storage }) {
+    return (
+        <VerifyLinks
+            label='Verify this proposal via'
+            links={[
+                { label: 'contract', href: buildContractLink(contractAddress) },
+                { label: `proposal #${proposalRecord.id}`, href: buildBigmapLink(storage.proposals, contractAddress) },
+                { label: `votes bigmap ${storage.votes}`, href: buildBigmapLink(storage.votes, contractAddress) },
+                { label: 'vote operations', href: buildVoteOperationsLink(contractAddress) },
+                proposalRecord.proposalOperation && { label: 'creation op', href: buildOperationLink(proposalRecord.proposalOperation.hash) },
+                proposalRecord.executeOperation && { label: 'execute op', href: buildOperationLink(proposalRecord.executeOperation.hash) },
+            ]}
+            className='detail-verify-links'
+        />
+    );
+}
+
+function ProposalHeader({ proposalRecord }) {
+    return (
+        <div className='detail-header'>
+            <div className='detail-header__crumbs'>
+                <Link to='/proposals'>Proposals</Link>
+                <span>/</span>
+                <span className='mono-text'>#{proposalRecord.id}</span>
+            </div>
+            <h2>
+                <TezosAddressLink address={proposalRecord.proposal.issuer} useAlias shorten />
+                {' proposed to '}
+                {PROPOSAL_KIND_METADATA[proposalRecord.kind]?.label || proposalRecord.kind}
+            </h2>
+            <div className='detail-header__meta'>
+                <span>{formatTimestamp(proposalRecord.createdAt)}</span>
+                <span>{proposalRecord.status === 'executed' ? `executed ${formatRelativeTime(proposalRecord.executedAt)}` : `expires ${formatRelativeTime(proposalRecord.expiresAt)}`}</span>
+                <span>{proposalRecord.yesVoters.length} yes</span>
+                <span>{proposalRecord.noVoters.length} no</span>
+                <span>{proposalRecord.pendingVoters.length} pending</span>
+                {proposalRecord.userVote !== undefined && <span>you voted {proposalRecord.userVote ? 'YES' : 'NO'}</span>}
+            </div>
+        </div>
+    );
+}
+
+export function ProposalDetails() {
+    const params = useParams();
+    const { contractAddress, executeProposal, proposalRecords, proposals, storage, userAddress, voteOperations, voteProposal, voteRecords } = useProposalData();
+
+    if (!(storage && proposals && voteRecords && voteOperations)) {
+        return <LoadingState />;
+    }
+
+    const proposalRecord = proposalRecords.find(record => String(record.id) === params.proposalId);
+
+    if (!proposalRecord) {
+        return (
+            <section className='dashboard-section'>
+                <p>Proposal #{params.proposalId} was not found in the current bigmap snapshot.</p>
+                <Link to='/proposals'>Back to proposals</Link>
+            </section>
+        );
+    }
+
+    const isUser = storage.users.includes(userAddress);
+
+    return (
+        <section className='proposal-detail'>
+            <ProposalHeader proposalRecord={proposalRecord} />
+
+            <div className='proposal-detail__grid'>
+                <div className='proposal-detail__main'>
+                    {proposalRecord.kind === 'text' ? <IpfsPanel cid={proposalRecord.ipfsCid} /> : <PayloadCard proposalRecord={proposalRecord} />}
+                    <ProposalVerifyFooter contractAddress={contractAddress} proposalRecord={proposalRecord} storage={storage} />
+                </div>
+                <aside className='proposal-detail__sidebar'>
+                    <YourVoteCard isUser={isUser} proposalRecord={proposalRecord} userAddress={userAddress} onExecute={executeProposal} onVote={voteProposal} />
+                    <VoteBreakdown proposalRecord={proposalRecord} />
+                    <ProvenanceCard contractAddress={contractAddress} proposalRecord={proposalRecord} storage={storage} />
+                </aside>
+            </div>
+        </section>
     );
 }

@@ -121,4 +121,98 @@
     .error-message {
         background-color: $dark-surface;
     }
+
+    .tezos-address-secondary,
+    .status-strip__label,
+    .status-strip__extra,
+    .dashboard-section__subtitle,
+    .proposal-row__status-copy,
+    .detail-card__label,
+    .detail-card__subheader,
+    .detail-card__message,
+    .verify-links__label,
+    .members-table__muted,
+    .payload-grid__label,
+    .members-table__head {
+        color: $dark-muted;
+    }
+
+    .nav-badge {
+        border-color: $dark-border;
+        background-color: $dark-yes-vote;
+        color: $dark-text;
+    }
+
+    .status-strip__item,
+    .empty-state,
+    .detail-card,
+    .verify-links,
+    .vote-pill,
+    .kind-badge {
+        background-color: $dark-surface;
+        border-color: $dark-border;
+    }
+
+    .kind-badge--text,
+    .kind-badge--expiration-time,
+    .kind-badge--minimum-votes {
+        background-color: #243149;
+    }
+
+    .kind-badge--add-user {
+        background-color: #1f3626;
+    }
+
+    .kind-badge--remove-user {
+        background-color: #442020;
+    }
+
+    .kind-badge--transfer-mutez,
+    .kind-badge--transfer-token,
+    .kind-badge--lambda-function {
+        background-color: #4a361e;
+    }
+
+    .awaiting-section {
+        border-color: #34553d;
+        background-color: #1f2d22;
+    }
+
+    .empty-state--success,
+    .members-table__row.is-user,
+    .vote-pill--yes,
+    .proposal-row__vote-state.is-yes {
+        background-color: $dark-yes-vote;
+    }
+
+    .vote-pill--no,
+    .proposal-row__vote-state.is-no {
+        background-color: $dark-no-vote;
+    }
+
+    .proposal-row,
+    .vote-group,
+    .members-table__row,
+    .detail-card__header,
+    .detail-card__subheader,
+    .vote-pill__op {
+        border-color: $dark-border;
+    }
+
+    .quorum-bar__track,
+    .participation-bar__track {
+        background-color: #181818;
+        border-color: $dark-border;
+    }
+
+    .detail-card__content,
+    .micheline-code {
+        background-color: $dark-elevated;
+    }
+
+    .member-avatar {
+        border-color: $dark-border;
+        color: $dark-text;
+        background: hsl(var(--avatar-hue), 25%, 28%);
+    }
 }

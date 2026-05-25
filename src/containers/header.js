@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { MultisigContext } from './context';
 import { TezosAddressLink } from './links';
 import { Button } from './button';
+import { buildProposalRecords } from './utils';
 
 
 export function Header({ darkMode, toggleDarkMode }) {
@@ -16,6 +17,19 @@ export function Header({ darkMode, toggleDarkMode }) {
 
 
 export function Navigation() {
+    const context = useContext(MultisigContext);
+    const proposalRecords = buildProposalRecords({
+        storage: context.storage,
+        proposals: context.proposals,
+        voteRecords: context.voteRecords,
+        proposalOperations: context.proposalOperations,
+        voteOperations: context.voteOperations,
+        executeOperations: context.executeOperations,
+        storageHistory: context.storageHistory,
+        userAddress: context.userAddress,
+    });
+    const awaitingCount = proposalRecords.filter(proposalRecord => proposalRecord.isAwaitingUser).length;
+
     return (
         <nav>
             <ul>
@@ -23,7 +37,13 @@ export function Navigation() {
                     <NavLink to='/'>Home</NavLink>
                 </li>
                 <li>
-                    <NavLink to='/proposals'>Proposals</NavLink>
+                    <NavLink to='/proposals'>
+                        Proposals
+                        {awaitingCount > 0 && <span className='nav-badge'>{awaitingCount}</span>}
+                    </NavLink>
+                </li>
+                <li>
+                    <NavLink to='/members'>Members</NavLink>
                 </li>
                 <li>
                     <NavLink to='/create'>Create proposals</NavLink>
