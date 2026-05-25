@@ -7,11 +7,9 @@ import { buildBigmapLink, buildContractLink, buildContractOperationsLink, shorte
 export function Footer() {
     const { contractAddress, storage } = useContext(MultisigContext);
     const links = [
-        contractAddress && { label: 'contract', href: buildContractLink(contractAddress) },
         contractAddress && storage?.metadata && { label: `metadata bigmap ${storage.metadata}`, href: buildBigmapLink(storage.metadata, contractAddress) },
         contractAddress && storage?.proposals && { label: `proposals bigmap ${storage.proposals}`, href: buildBigmapLink(storage.proposals, contractAddress) },
         contractAddress && storage?.votes && { label: `votes bigmap ${storage.votes}`, href: buildBigmapLink(storage.votes, contractAddress) },
-        contractAddress && { label: 'contract operations', href: buildContractOperationsLink(contractAddress) },
     ].filter(Boolean);
 
     return (
@@ -28,12 +26,11 @@ export function Footer() {
                         <DefaultLink href={buildContractOperationsLink(contractAddress)} className='app-footer__inline-link'>operations on TzKT</DefaultLink>
                     </span>
                 )}
-            </div>
-            <div className='footer-links'>
                 {links.map(link => (
-                    <DefaultLink key={link.label} href={link.href} className='footer-links__item'>
-                        {link.label}
-                    </DefaultLink>
+                    <span key={link.label}>
+                        <DefaultLink href={link.href} className='app-footer__inline-link'>{link.label}</DefaultLink>
+                        {link !== links[links.length - 1] && " | "}
+                    </span>
                 ))}
             </div>
         </footer>

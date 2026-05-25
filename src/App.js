@@ -38,7 +38,6 @@ export function App() {
 export function MultisigParameters() {
     return (
         <main>
-            <h1>Teia Core Team Multisig</h1>
             <Parameters />
         </main>
     );
@@ -72,7 +71,6 @@ export function MultisigMembers() {
 export function CreateProposals() {
     return (
         <main>
-            <h1>Create new proposals</h1>
             <CreateProposalForms />
         </main>
     );

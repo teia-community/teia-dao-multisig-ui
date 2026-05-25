@@ -34,8 +34,9 @@ export function TezosAddressLink(props) {
         if (props.useAlias && alias) {
             content = (
                 <>
-                    <span className='tezos-address-primary'>{shortened}</span>
-                    <span className='tezos-address-secondary'>{alias}</span>
+                    <span className='tezos-address-primary'>{alias}</span>
+                    <br />
+                    <span className='tezos-address-secondary'>{shortened}</span>
                 </>
             );
         } else {

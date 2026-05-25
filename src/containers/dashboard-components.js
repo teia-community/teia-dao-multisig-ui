@@ -185,21 +185,6 @@ export function ProposalIdLink({ proposalId, contractAddress }) {
     );
 }
 
-export function VerifyLinks({ label, links, className = '' }) {
-    return (
-        <div className={`verify-links ${className}`.trim()}>
-            <span className='verify-links__label'>{label}</span>
-            <div className='verify-links__items'>
-                {links.filter(Boolean).map(link => (
-                    <DefaultLink key={`${link.label}-${link.href}`} href={link.href} className='verify-links__item'>
-                        {link.label}
-                    </DefaultLink>
-                ))}
-            </div>
-        </div>
-    );
-}
-
 export function VotePill({ address, operation, vote }) {
     return (
         <span className={`vote-pill${vote ? ` vote-pill--${vote}` : ''}`}>
@@ -210,6 +195,18 @@ export function VotePill({ address, operation, vote }) {
                 </DefaultLink>
             )}
         </span>
+    );
+}
+export function VoteRow({ address, operation, vote }) {
+    return (
+        <div className={`vote-row${vote ? ` vote-row--${vote}` : ''}`}>
+            <TezosAddressLink address={address} useAlias shorten />
+            {operation && (
+                <DefaultLink href={buildOperationLink(operation.hash)} className='vote-row__op'>
+                    view operation
+                </DefaultLink>
+            )}
+        </div>
     );
 }
 

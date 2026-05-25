@@ -12,24 +12,41 @@ export function CreateProposalForms() {
     // Return if the user is not connected
     if (!context.userAddress) {
         return (
-            <section>
-                <p>You need to sync your wallet to be able to create proposals.</p>
-            </section>
+            <div className='proposal-form-page'>
+                <div className='page-intro'>
+                    <h1>Create proposals</h1>
+                    <p className='page-intro__copy'>Draft operational, treasury, and governance proposals for the multisig.</p>
+                </div>
+                <section className='proposal-form-section proposal-form-section--notice'>
+                    <p>You need to sync your wallet to be able to create proposals.</p>
+                </section>
+            </div>
         );
     }
 
     // Return if the user is not one of the multisig users
     if (!context.storage?.users.includes(context.userAddress)) {
         return (
-            <section>
-                <p>Only multisig users can create new proposals.</p>
-            </section>
+            <div className='proposal-form-page'>
+                <div className='page-intro'>
+                    <h1>Create proposals</h1>
+                    <p className='page-intro__copy'>Draft operational, treasury, and governance proposals for the multisig.</p>
+                </div>
+                <section className='proposal-form-section proposal-form-section--notice'>
+                    <p>Only multisig users can create new proposals.</p>
+                </section>
+            </div>
         );
     }
 
     return (
-        <>
-            <section>
+        <div className='proposal-form-page'>
+            <div className='page-intro'>
+                <h1>Create proposals</h1>
+                <p className='page-intro__copy'>Use the matching proposal type below, review the warnings carefully, and keep payloads explicit enough for on-chain verification.</p>
+            </div>
+
+            <section className='proposal-form-section'>
                 <h2>Transfer tez proposal</h2>
                 <p>
                     Use this form to create a proposal that, if accepted, it will transfer
@@ -38,7 +55,7 @@ export function CreateProposalForms() {
                 <TransferTezProposalForm handleSubmit={context.createTransferMutezProposal} />
             </section>
 
-            <section>
+            <section className='proposal-form-section'>
                 <h2>Transfer token proposal</h2>
                 <p>
                     Use this form to create a proposal that, if accepted, it will transfer
@@ -47,7 +64,7 @@ export function CreateProposalForms() {
                 <TransferTokenProposalForm handleSubmit={context.createTransferTokenProposal} />
             </section>
 
-            <section>
+            <section className='proposal-form-section'>
                 <h2>Text proposal</h2>
                 <p>
                     Use this form to create a proposal to approve a text or decission.
@@ -63,7 +80,7 @@ export function CreateProposalForms() {
                 />
             </section>
 
-            <section>
+            <section className='proposal-form-section'>
                 <h2>Lambda function proposal</h2>
                 <p>
                     Use this form to create a proposal that, if accepted, it will execute some smart contract code
@@ -82,7 +99,7 @@ export function CreateProposalForms() {
                 <LambdaFunctionProposalForm handleSubmit={context.createLambdaFunctionProposal} />
             </section>
 
-            <section>
+            <section className='proposal-form-section'>
                 <h2>Add user proposal</h2>
                 <p>
                     Use this form to create a proposal that, if accepted, it will add a new user to the multisig.
@@ -94,7 +111,7 @@ export function CreateProposalForms() {
                 <AddUserProposalForm handleSubmit={context.createAddUserProposal} />
             </section>
 
-            <section>
+            <section className='proposal-form-section'>
                 <h2>Remove user proposal</h2>
                 <p>
                     Use this form to create a proposal that, if accepted, it will remove one of the multisig users.
@@ -110,7 +127,7 @@ export function CreateProposalForms() {
                 />
             </section>
 
-            <section>
+            <section className='proposal-form-section'>
                 <h2>Minimum votes proposal</h2>
                 <p>
                     Use this form to create a proposal that, if accepted, it will change the minimum number of positive
@@ -126,7 +143,7 @@ export function CreateProposalForms() {
                 />
             </section>
 
-            <section>
+            <section className='proposal-form-section'>
                 <h2>Expiration time proposal</h2>
                 <p>
                     Use this form to create a proposal that, if accepted, it will change the proposals expiration time.
@@ -142,7 +159,7 @@ export function CreateProposalForms() {
                     handleSubmit={context.createExpirationTimeProposal}
                 />
             </section>
-        </>
+        </div>
     );
 }
 

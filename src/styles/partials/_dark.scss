@@ -13,9 +13,9 @@
     $dark-link:             #8888ff;
     $dark-button-bg:        #333333;
     $dark-button-hover:     #444444;
-    $dark-yes-vote:         #1a3020;
-    $dark-yes-vote-hover:   #224028;
-    $dark-no-vote:          #3a1a1a;
+    $dark-yes-vote:         #203427;
+    $dark-yes-vote-hover:   #294230;
+    $dark-no-vote:          #412125;
 
     body {
         background-color: $dark-bg;
@@ -125,6 +125,7 @@
     .tezos-address-secondary,
     .app-footer__meta,
     .page-intro__meta,
+    .page-intro__copy,
     .page-intro__separator,
     .dashboard-section__note,
     .dashboard-section__count,
@@ -149,7 +150,7 @@
         color: $dark-text;
     }
 
-    .status-strip__item,
+    .status-strip,
     .empty-state,
     .detail-card,
     .verify-links,
@@ -157,6 +158,17 @@
     .kind-badge {
         background-color: $dark-surface;
         border-color: $dark-border;
+    }
+
+    .verify-links--minimal {
+        background: none;
+        border-top-color: $dark-border;
+    }
+
+    .verify-links--minimal .verify-links__item,
+    .footer-links__item,
+    .app-footer__inline-link {
+        border: none;
     }
 
     .kind-badge--text,
@@ -180,8 +192,8 @@
     }
 
     .awaiting-section {
-        border-color: #34553d;
-        background-color: #1f2d22;
+        border-color: #3d5c45;
+        background-color: #212823;
     }
 
     .empty-state--success,
@@ -196,8 +208,21 @@
         background-color: $dark-no-vote;
     }
 
-    .detail-header__status.is-ready {
-        color: #7fcf92;
+    .status-strip__value.is-emphasis,
+    .detail-header__status.is-ready,
+    .quorum-bar__summary.is-ready,
+    .proposal-row__vote-state.is-yes,
+    .history-summary__yes,
+    .history-summary__vote.is-yes,
+    .participation-bar__copy strong {
+        color: #8fd3a0;
+    }
+
+    .proposal-row__vote-state.is-no,
+    .history-summary__no,
+    .history-summary__vote.is-no,
+    .participation-bar__no-copy {
+        color: #ff9a9a;
     }
 
     .proposal-row,
@@ -215,9 +240,29 @@
         border-color: $dark-border;
     }
 
+    .proposal-row:hover,
+    .proposal-row:focus-visible,
+    .proposal-row:focus-within {
+        background-color: #2a2a2a;
+        outline-color: #555555;
+    }
+
+    .quorum-bar__yes,
+    .participation-bar__yes {
+        background-color: #366f4a;
+    }
+
+    .quorum-bar__yes.is-ready {
+        background-color: #3f8d5b;
+    }
+
     .detail-card__content,
     .micheline-code {
         background-color: $dark-elevated;
+    }
+
+    .create-proposal-warning {
+        border-left-color: #8a6535;
     }
 
     .member-avatar {

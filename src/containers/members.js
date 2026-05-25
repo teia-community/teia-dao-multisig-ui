@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { Avatar, VerifyLinks } from './dashboard-components';
+import { Avatar } from './dashboard-components';
 import { MultisigContext } from './context';
 import { DefaultLink, TezosAddressLink } from './links';
 import {
@@ -105,15 +105,6 @@ export function MembersDirectory() {
                     );
                 })}
             </div>
-
-            <VerifyLinks
-                label='Verify this directory via'
-                links={[
-                    { label: 'contract', href: buildContractLink(context.contractAddress) },
-                    { label: `proposals bigmap ${context.storage.proposals}`, href: buildBigmapLink(context.storage.proposals, context.contractAddress) },
-                    { label: `votes bigmap ${context.storage.votes}`, href: buildBigmapLink(context.storage.votes, context.contractAddress) },
-                ]}
-            />
         </section>
     );
 }

@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { Parser, emitMicheline } from '@taquito/michel-codec';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { TOKENS } from '../constants';
-import { CopyButton, KindBadge, ProposalIdLink, ProposalSummary, QuorumBar, VerifyLinks, VotePill, useIpfsText } from './dashboard-components';
+import { CopyButton, KindBadge, ProposalIdLink, ProposalSummary, QuorumBar, VoteRow, VotePill, useIpfsText } from './dashboard-components';
 import { MultisigContext } from './context';
 import { DefaultLink, TezosAddressLink, TokenLink } from './links';
 import {
@@ -138,7 +138,7 @@ function StatusStrip({ contractAddress, storage, proposalRecords, awaitingCount 
     ];
 
     return (
-        <section className='status-strip'>
+        <div className='status-strip' aria-label='Multisig overview'>
             {items.map(item => (
                 <div key={item.label} className='status-strip__item'>
                     <span className='status-strip__label'>{item.label}</span>
@@ -154,22 +154,36 @@ function StatusStrip({ contractAddress, storage, proposalRecords, awaitingCount 
                     <span className='status-strip__extra'>{item.extra}</span>
                 </div>
             ))}
-        </section>
+        </div>
     );
 }
 
 function ProposalRow({ contractAddress, isUser, minimumVotes, proposalRecord, onExecute, onVote }) {
     const navigate = useNavigate();
+    const handleOpen = () => navigate(`/proposals/${proposalRecord.id}`);
 
     return (
         <div
             className={`proposal-row${proposalRecord.status !== 'open' ? ' is-history' : ''}${proposalRecord.status === 'open' && proposalRecord.userVote !== undefined ? ' is-muted' : ''}`}
+            role='button'
+            tabIndex={0}
+            aria-label={`Open proposal ${proposalRecord.id}`}
             onClick={event => {
                 if (event.target.closest('a,button')) {
                     return;
                 }
 
-                navigate(`/proposals/${proposalRecord.id}`);
+                handleOpen();
+            }}
+            onKeyDown={event => {
+                if (event.target !== event.currentTarget) {
+                    return;
+                }
+
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleOpen();
+                }
             }}>
             <div className='proposal-row__timestamp mono-text'>{formatTimestamp(proposalRecord.createdAt)}</div>
             <div className='proposal-row__identity'>
@@ -265,17 +279,7 @@ function AwaitingYouSection({ contractAddress, isUser, minimumVotes, proposals, 
             title='Awaiting your vote'
             count={proposals.length}
             note='click any row to read the proposal and verify on-chain'
-            className='awaiting-section'
-            footer={(
-                <VerifyLinks
-                    label='verify'
-                    links={[
-                        { label: 'contract on TzKT', href: buildContractLink(contractAddress) },
-                        { label: `proposals bigmap ${storage.proposals}`, href: buildBigmapLink(storage.proposals, contractAddress) },
-                        { label: `votes bigmap ${storage.votes}`, href: buildBigmapLink(storage.votes, contractAddress) },
-                    ]}
-                />
-            )}>
+            className='awaiting-section'>
             {proposals.length === 0 ? (
                 <EmptyState title='All caught up' copy='You have already handled every currently open proposal.' className='empty-state--success' />
             ) : (
@@ -607,7 +611,7 @@ function VoteBreakdown({ proposalRecord }) {
                         ) : (
                             <div className='vote-group__items'>
                                 {group.addresses.map(address => (
-                                    <VotePill
+                                    <VoteRow
                                         key={`${group.label}-${address}`}
                                         address={address}
                                         operation={proposalRecord.voteOperations[address]}
@@ -636,6 +640,12 @@ function ProvenanceCard({ contractAddress, proposalRecord, storage }) {
                 <div>
                     proposed by <TezosAddressLink address={proposalRecord.proposal.issuer} useAlias shorten />
                 </div>
+                <DefaultLink href={buildProposalStorageLink(proposalRecord.id, contractAddress)} className='detail-card__link'>
+                    proposal #{proposalRecord.id} on TzKT
+                </DefaultLink>
+                <DefaultLink href={buildVoteOperationsLink(contractAddress)} className='detail-card__link'>
+                    vote operations on TzKT
+                </DefaultLink>
                 {proposalRecord.proposalOperation && (
                     <DefaultLink href={buildOperationLink(proposalRecord.proposalOperation.hash)} className='detail-card__link'>
                         creation op {proposalRecord.proposalOperation.hash}
@@ -652,26 +662,13 @@ function ProvenanceCard({ contractAddress, proposalRecord, storage }) {
                 <DefaultLink href={buildBigmapLink(storage.votes, contractAddress)} className='detail-card__link'>
                     votes bigmap {storage.votes}
                 </DefaultLink>
+                {proposalRecord.kind === 'text' && proposalRecord.ipfsCid && (
+                    <DefaultLink href={buildIpfsGatewayLink(proposalRecord.ipfsCid, IPFS_GATEWAYS[0])} className='detail-card__link'>
+                        ipfs gateway
+                    </DefaultLink>
+                )}
             </div>
         </div>
-    );
-}
-
-function ProposalVerifyFooter({ contractAddress, proposalRecord, storage }) {
-    return (
-        <VerifyLinks
-            label='every claim on this page is backed by'
-            links={[
-                { label: `proposal #${proposalRecord.id} on TzKT`, href: buildProposalStorageLink(proposalRecord.id, contractAddress) },
-                { label: 'vote operations on TzKT', href: buildVoteOperationsLink(contractAddress) },
-                { label: `proposals bigmap ${storage.proposals}`, href: buildBigmapLink(storage.proposals, contractAddress) },
-                { label: `votes bigmap ${storage.votes}`, href: buildBigmapLink(storage.votes, contractAddress) },
-                proposalRecord.kind === 'text' && proposalRecord.ipfsCid && { label: 'ipfs gateway', href: buildIpfsGatewayLink(proposalRecord.ipfsCid, IPFS_GATEWAYS[0]) },
-                proposalRecord.proposalOperation && { label: 'creation op', href: buildOperationLink(proposalRecord.proposalOperation.hash) },
-                proposalRecord.executeOperation && { label: 'execute op', href: buildOperationLink(proposalRecord.executeOperation.hash) },
-            ]}
-            className='detail-verify-links'
-        />
     );
 }
 
@@ -738,7 +735,6 @@ export function ProposalDetails() {
             <div className='proposal-detail__grid'>
                 <div className='proposal-detail__main'>
                     {proposalRecord.kind === 'text' ? <IpfsPanel cid={proposalRecord.ipfsCid} /> : <PayloadCard proposalRecord={proposalRecord} />}
-                    <ProposalVerifyFooter contractAddress={contractAddress} proposalRecord={proposalRecord} storage={storage} />
                 </div>
                 <aside className='proposal-detail__sidebar'>
                     <YourVoteCard isUser={isUser} proposalRecord={proposalRecord} userAddress={userAddress} onExecute={executeProposal} onVote={voteProposal} />
