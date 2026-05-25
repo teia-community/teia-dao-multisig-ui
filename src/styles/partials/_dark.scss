@@ -123,6 +123,12 @@
     }
 
     .tezos-address-secondary,
+    .app-footer__meta,
+    .page-intro__meta,
+    .page-intro__separator,
+    .dashboard-section__note,
+    .dashboard-section__count,
+    .proposal-summary__fallback-note,
     .status-strip__label,
     .status-strip__extra,
     .dashboard-section__subtitle,
@@ -188,6 +194,10 @@
     .vote-pill--no,
     .proposal-row__vote-state.is-no {
         background-color: $dark-no-vote;
+    }
+
+    .detail-header__status.is-ready {
+        color: #7fcf92;
     }
 
     .proposal-row,

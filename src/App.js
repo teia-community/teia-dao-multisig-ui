@@ -47,7 +47,6 @@ export function MultisigParameters() {
 export function MultisigProposals() {
     return (
         <main>
-            <h1>Multisig proposals</h1>
             <Proposals />
         </main>
     );

@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { MultisigContext } from './context';
 import { DefaultLink } from './links';
-import { buildBigmapLink, buildContractLink, buildContractOperationsLink } from './utils';
+import { buildBigmapLink, buildContractLink, buildContractOperationsLink, shortenAddress } from './utils';
 
 
 export function Footer() {
@@ -15,13 +15,20 @@ export function Footer() {
     ].filter(Boolean);
 
     return (
-        <footer>
-            <p>
-                Created by the <a href='https://twitter.com/TeiaCommunity'>@TeiaCommunity</a> using <a href='https://reactjs.org'>React</a>,
-                {' '}
-                <a href='https://tezostaquito.io'>Taquito</a>, and the <a href='https://tzkt.io'>TzKT</a> API.
-            </p>
-            <p>Do not trust this UI without checking the linked contract, bigmaps, and operations.</p>
+        <footer className='app-footer'>
+            <p className='app-footer__headline'>don't trust this UI - verify everything on-chain</p>
+            <div className='app-footer__meta'>
+                {contractAddress && (
+                    <span>
+                        contract <DefaultLink href={buildContractLink(contractAddress)} className='app-footer__inline-link'>{shortenAddress(contractAddress, 6, 5)}</DefaultLink>
+                    </span>
+                )}
+                {contractAddress && (
+                    <span>
+                        <DefaultLink href={buildContractOperationsLink(contractAddress)} className='app-footer__inline-link'>operations on TzKT</DefaultLink>
+                    </span>
+                )}
+            </div>
             <div className='footer-links'>
                 {links.map(link => (
                     <DefaultLink key={link.label} href={link.href} className='footer-links__item'>

@@ -12,12 +12,14 @@ import {
     buildIpfsGatewayLink,
     buildOperationLink,
     buildProposalRecords,
+    buildProposalStorageLink,
     buildVoteOperationsLink,
     formatMutezAmount,
     formatRelativeTime,
     formatTimestamp,
     IPFS_GATEWAYS,
     PROPOSAL_KIND_METADATA,
+    shortenAddress,
 } from './utils';
 
 
@@ -37,25 +39,33 @@ function useProposalData() {
     return { ...context, proposalRecords };
 }
 
-function ProposalSection({ title, subtitle, links, children, className = '' }) {
+function ProposalSection({ title, count, note, links, children, className = '', footer }) {
     return (
         <section className={`dashboard-section ${className}`.trim()}>
             <div className='dashboard-section__header'>
-                <div>
-                    <h2>{title}</h2>
-                    {subtitle && <p className='dashboard-section__subtitle'>{subtitle}</p>}
+                <div className='dashboard-section__heading'>
+                    <div className='dashboard-section__title-row'>
+                        <h2>{title}</h2>
+                        {typeof count === 'number' && <span className='dashboard-section__count mono-text'>{count}</span>}
+                    </div>
                 </div>
-                {links && links.length > 0 && (
-                    <div className='dashboard-section__links'>
-                        {links.map(link => (
-                            <DefaultLink key={`${link.label}-${link.href}`} href={link.href} className='dashboard-section__link'>
-                                {link.label}
-                            </DefaultLink>
-                        ))}
+                {(note || (links && links.length > 0)) && (
+                    <div className='dashboard-section__header-side'>
+                        {note && <span className='dashboard-section__note mono-text'>{note}</span>}
+                        {links && links.length > 0 && (
+                            <div className='dashboard-section__links'>
+                                {links.map(link => (
+                                    <DefaultLink key={`${link.label}-${link.href}`} href={link.href} className='dashboard-section__link'>
+                                        {link.label}
+                                    </DefaultLink>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
             {children}
+            {footer}
         </section>
     );
 }
@@ -77,13 +87,36 @@ function EmptyState({ title, copy, className = '' }) {
     );
 }
 
+function PageIntro({ activeCount, awaitingCount, userAddress }) {
+    return (
+        <div className='page-intro'>
+            <h1>Multisig proposals</h1>
+            <div className='page-intro__meta mono-text'>
+                {userAddress ? (
+                    <>
+                        <span>
+                            you are <TezosAddressLink address={userAddress} useAlias shorten />
+                        </span>
+                        <span className='page-intro__separator'>-</span>
+                        <span>{activeCount} open</span>
+                        <span className='page-intro__separator'>-</span>
+                        <span>{awaitingCount} need your vote</span>
+                    </>
+                ) : (
+                    <span>connect a multisig wallet to personalize the active queue</span>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function StatusStrip({ contractAddress, storage, proposalRecords, awaitingCount }) {
     const activeCount = proposalRecords.filter(proposalRecord => proposalRecord.status === 'open').length;
     const items = [
         {
             label: 'contract',
-            value: contractAddress,
-            extra: 'verify on TzKT',
+            value: shortenAddress(contractAddress, 6, 5),
+            extra: 'mainnet',
             href: buildContractLink(contractAddress),
         },
         {
@@ -100,7 +133,7 @@ function StatusStrip({ contractAddress, storage, proposalRecords, awaitingCount 
         {
             label: 'active',
             value: activeCount,
-            extra: `${proposalRecords.filter(proposalRecord => proposalRecord.canExecute).length} executable`,
+            extra: `${proposalRecords.filter(proposalRecord => proposalRecord.canExecute).length} ready to execute`,
         },
     ];
 
@@ -130,7 +163,7 @@ function ProposalRow({ contractAddress, isUser, minimumVotes, proposalRecord, on
 
     return (
         <div
-            className={`proposal-row${proposalRecord.status !== 'open' ? ' is-history' : ''}`}
+            className={`proposal-row${proposalRecord.status !== 'open' ? ' is-history' : ''}${proposalRecord.status === 'open' && proposalRecord.userVote !== undefined ? ' is-muted' : ''}`}
             onClick={event => {
                 if (event.target.closest('a,button')) {
                     return;
@@ -148,7 +181,7 @@ function ProposalRow({ contractAddress, isUser, minimumVotes, proposalRecord, on
                     <span onClick={event => event.stopPropagation()}>
                         <TezosAddressLink address={proposalRecord.proposal.issuer} useAlias shorten />
                     </span>
-                    <span> proposed to </span>
+                    <span className='proposal-row__summary-separator'>-</span>
                     <ProposalSummary proposalRecord={proposalRecord} />
                 </div>
                 <div className='proposal-row__meta'>
@@ -194,10 +227,6 @@ function ProposalRow({ contractAddress, isUser, minimumVotes, proposalRecord, on
                 {proposalRecord.status === 'expired' && (
                     <span className='proposal-row__history-link'>expired {formatRelativeTime(proposalRecord.expiresAt)}</span>
                 )}
-
-                <Link to={`/proposals/${proposalRecord.id}`} className='proposal-row__open-link'>
-                    open
-                </Link>
             </div>
         </div>
     );
@@ -218,10 +247,10 @@ function ExecutedSummary({ proposalRecord }) {
     );
 }
 
-function AwaitingYouSection({ contractAddress, isUser, minimumVotes, proposals, onExecute, onVote, userAddress }) {
+function AwaitingYouSection({ contractAddress, isUser, minimumVotes, proposals, onExecute, onVote, storage, userAddress }) {
     if (!userAddress) {
         return (
-            <ProposalSection title='Awaiting your vote' subtitle='Connect a multisig wallet to personalize this queue.' className='awaiting-section'>
+            <ProposalSection title='Awaiting your vote' count={0} note='sync a multisig wallet to personalize this queue' className='awaiting-section'>
                 <EmptyState title='Wallet not connected' copy='Sync the wallet used for multisig voting to see the proposals that still need you.' />
             </ProposalSection>
         );
@@ -234,8 +263,19 @@ function AwaitingYouSection({ contractAddress, isUser, minimumVotes, proposals, 
     return (
         <ProposalSection
             title='Awaiting your vote'
-            subtitle={proposals.length > 0 ? `${proposals.length} proposal${proposals.length === 1 ? '' : 's'} still need your vote.` : undefined}
-            className='awaiting-section'>
+            count={proposals.length}
+            note='click any row to read the proposal and verify on-chain'
+            className='awaiting-section'
+            footer={(
+                <VerifyLinks
+                    label='verify'
+                    links={[
+                        { label: 'contract on TzKT', href: buildContractLink(contractAddress) },
+                        { label: `proposals bigmap ${storage.proposals}`, href: buildBigmapLink(storage.proposals, contractAddress) },
+                        { label: `votes bigmap ${storage.votes}`, href: buildBigmapLink(storage.votes, contractAddress) },
+                    ]}
+                />
+            )}>
             {proposals.length === 0 ? (
                 <EmptyState title='All caught up' copy='You have already handled every currently open proposal.' className='empty-state--success' />
             ) : (
@@ -259,6 +299,7 @@ function AwaitingYouSection({ contractAddress, isUser, minimumVotes, proposals, 
 
 export function Proposals() {
     const { contractAddress, executeProposal, proposalRecords, proposalOperations, proposals, storage, userAddress, voteOperations, voteProposal, voteRecords } = useProposalData();
+    const [showAllExecuted, setShowAllExecuted] = useState(false);
 
     if (!(storage && proposals && voteRecords && proposalOperations && voteOperations)) {
         return <LoadingState />;
@@ -267,9 +308,10 @@ export function Proposals() {
     const isUser = storage.users.includes(userAddress);
     const minimumVotes = Number(storage.minimum_votes || 0);
     const awaitingProposals = proposalRecords.filter(proposalRecord => proposalRecord.isAwaitingUser);
-    const activeProposals = proposalRecords.filter(proposalRecord => proposalRecord.status === 'open' && !proposalRecord.isAwaitingUser);
+    const activeProposals = proposalRecords.filter(proposalRecord => proposalRecord.status === 'open');
     const executedProposals = proposalRecords.filter(proposalRecord => proposalRecord.status === 'executed');
     const expiredProposals = proposalRecords.filter(proposalRecord => proposalRecord.status === 'expired');
+    const visibleExecutedProposals = showAllExecuted ? executedProposals : executedProposals.slice(0, 5);
 
     return (
         <>
@@ -280,6 +322,8 @@ export function Proposals() {
                 awaitingCount={awaitingProposals.length}
             />
 
+            <PageIntro activeCount={activeProposals.length} awaitingCount={awaitingProposals.length} userAddress={userAddress} />
+
             <AwaitingYouSection
                 contractAddress={contractAddress}
                 isUser={isUser}
@@ -287,10 +331,11 @@ export function Proposals() {
                 proposals={awaitingProposals}
                 onExecute={executeProposal}
                 onVote={voteProposal}
+                storage={storage}
                 userAddress={userAddress}
             />
 
-            <ProposalSection title='Active proposals' subtitle='Open proposals that are no longer waiting on your vote.'>
+            <ProposalSection title='Active proposals' count={activeProposals.length} note={`quorum ${minimumVotes} of ${storage.users.length}`}>
                 {activeProposals.length === 0 ? (
                     <EmptyState title='No other active proposals' copy='Every open proposal is either already handled or is waiting in the queue above.' />
                 ) : (
@@ -312,28 +357,37 @@ export function Proposals() {
 
             <ProposalSection
                 title='Executed proposals'
-                subtitle='Past proposals retain their full yes / no / abstain breakdown.'
+                count={executedProposals.length}
                 links={[{ label: 'full history on TzKT', href: buildContractOperationsLink(contractAddress) }]}>
                 {executedProposals.length === 0 ? (
                     <EmptyState title='Nothing executed yet' copy='Executed proposals will appear here with their final vote breakdowns and execution operations.' />
                 ) : (
-                    <div className='proposal-table'>
-                        {executedProposals.map(proposalRecord => (
-                            <ProposalRow
-                                key={proposalRecord.id}
-                                contractAddress={contractAddress}
-                                isUser={false}
-                                minimumVotes={minimumVotes}
-                                proposalRecord={proposalRecord}
-                                onExecute={executeProposal}
-                                onVote={voteProposal}
-                            />
-                        ))}
-                    </div>
+                    <>
+                        <div className='proposal-table'>
+                            {visibleExecutedProposals.map(proposalRecord => (
+                                <ProposalRow
+                                    key={proposalRecord.id}
+                                    contractAddress={contractAddress}
+                                    isUser={false}
+                                    minimumVotes={minimumVotes}
+                                    proposalRecord={proposalRecord}
+                                    onExecute={executeProposal}
+                                    onVote={voteProposal}
+                                />
+                            ))}
+                        </div>
+                        {!showAllExecuted && executedProposals.length > visibleExecutedProposals.length && (
+                            <div className='proposal-section__footer'>
+                                <button onClick={() => setShowAllExecuted(true)}>
+                                    show {executedProposals.length - visibleExecutedProposals.length} more
+                                </button>
+                            </div>
+                        )}
+                    </>
                 )}
             </ProposalSection>
 
-            <ProposalSection title='Expired proposals' subtitle='These proposals can no longer be executed or voted on.'>
+            <ProposalSection title='Expired proposals' count={expiredProposals.length} note='these proposals can no longer be executed or voted on'>
                 {expiredProposals.length === 0 ? (
                     <EmptyState title='No expired proposals' copy='Open proposals that miss quorum before expiry will show up here.' />
                 ) : (
@@ -363,19 +417,15 @@ function IpfsPanel({ cid }) {
     return (
         <div className='detail-card'>
             <div className='detail-card__header'>
-                <div className='detail-card__title'>
-                    <span className='detail-card__label'>IPFS</span>
+                <div className='detail-card__title detail-card__title--inline'>
+                    <span className='detail-card__label'>ipfs://</span>
                     <span className='detail-card__cid mono-text'>{cid}</span>
                 </div>
-                <div className='detail-card__header-actions'>
-                    <CopyButton value={cid} text='copy cid' />
-                    <button className={`inline-button${showRaw ? '' : ' is-active'}`} onClick={() => setShowRaw(false)}>text</button>
-                    <button className={`inline-button${showRaw ? ' is-active' : ''}`} onClick={() => setShowRaw(true)}>raw</button>
-                </div>
+                <CopyButton value={cid} text='copy cid' />
             </div>
 
             <div className='detail-card__subheader'>
-                <span>gateways</span>
+                <span>open via</span>
                 <div className='detail-card__links'>
                     {IPFS_GATEWAYS.map(currentGateway => (
                         <DefaultLink key={currentGateway} href={buildIpfsGatewayLink(cid, currentGateway)} className={`detail-card__link${gateway === currentGateway ? ' is-active' : ''}`}>
@@ -399,6 +449,10 @@ function IpfsPanel({ cid }) {
                     <div className='detail-card__subheader'>
                         <span>{gateway ? `fetched from ${gateway}` : 'gateway race complete'}</span>
                         {truncated && <span>truncated at 100KB</span>}
+                        <div className='detail-card__header-actions'>
+                            <button className={`inline-button${showRaw ? '' : ' is-active'}`} onClick={() => setShowRaw(false)}>text</button>
+                            <button className={`inline-button${showRaw ? ' is-active' : ''}`} onClick={() => setShowRaw(true)}>raw</button>
+                        </div>
                     </div>
                     <pre className='detail-card__content'>{showRaw ? text : text.trim()}</pre>
                 </>
@@ -476,10 +530,10 @@ function PayloadCard({ proposalRecord }) {
             </div>
             <div className='payload-grid'>
                 {rows.map(row => (
-                    <>
+                    <React.Fragment key={row.label}>
                         <span className='payload-grid__label'>{row.label}</span>
                         <div className='payload-grid__value'>{row.value}</div>
-                    </>
+                    </React.Fragment>
                 ))}
             </div>
         </div>
@@ -530,7 +584,7 @@ function VoteBreakdown({ proposalRecord }) {
     const groups = [
         { label: 'YES', vote: 'yes', addresses: [...proposalRecord.yesVoters].sort() },
         { label: 'NO', vote: 'no', addresses: [...proposalRecord.noVoters].sort() },
-        { label: proposalRecord.status === 'open' ? 'NOT VOTED' : 'ABSTAIN', addresses: [...proposalRecord.pendingVoters].sort() },
+        { label: proposalRecord.status === 'open' ? 'NOT VOTED YET' : 'DID NOT VOTE', addresses: [...proposalRecord.pendingVoters].sort() },
     ];
 
     return (
@@ -606,12 +660,13 @@ function ProvenanceCard({ contractAddress, proposalRecord, storage }) {
 function ProposalVerifyFooter({ contractAddress, proposalRecord, storage }) {
     return (
         <VerifyLinks
-            label='Verify this proposal via'
+            label='every claim on this page is backed by'
             links={[
-                { label: 'contract', href: buildContractLink(contractAddress) },
-                { label: `proposal #${proposalRecord.id}`, href: buildBigmapLink(storage.proposals, contractAddress) },
+                { label: `proposal #${proposalRecord.id} on TzKT`, href: buildProposalStorageLink(proposalRecord.id, contractAddress) },
+                { label: 'vote operations on TzKT', href: buildVoteOperationsLink(contractAddress) },
+                { label: `proposals bigmap ${storage.proposals}`, href: buildBigmapLink(storage.proposals, contractAddress) },
                 { label: `votes bigmap ${storage.votes}`, href: buildBigmapLink(storage.votes, contractAddress) },
-                { label: 'vote operations', href: buildVoteOperationsLink(contractAddress) },
+                proposalRecord.kind === 'text' && proposalRecord.ipfsCid && { label: 'ipfs gateway', href: buildIpfsGatewayLink(proposalRecord.ipfsCid, IPFS_GATEWAYS[0]) },
                 proposalRecord.proposalOperation && { label: 'creation op', href: buildOperationLink(proposalRecord.proposalOperation.hash) },
                 proposalRecord.executeOperation && { label: 'execute op', href: buildOperationLink(proposalRecord.executeOperation.hash) },
             ]}
@@ -620,7 +675,7 @@ function ProposalVerifyFooter({ contractAddress, proposalRecord, storage }) {
     );
 }
 
-function ProposalHeader({ proposalRecord }) {
+function ProposalHeader({ minimumVotes, proposalRecord }) {
     return (
         <div className='detail-header'>
             <div className='detail-header__crumbs'>
@@ -628,18 +683,27 @@ function ProposalHeader({ proposalRecord }) {
                 <span>/</span>
                 <span className='mono-text'>#{proposalRecord.id}</span>
             </div>
-            <h2>
+            <h1 className='detail-header__title'>
                 <TezosAddressLink address={proposalRecord.proposal.issuer} useAlias shorten />
-                {' proposed to '}
-                {PROPOSAL_KIND_METADATA[proposalRecord.kind]?.label || proposalRecord.kind}
-            </h2>
+                {' proposed '}
+                <span className='detail-header__summary'>
+                    <ProposalSummary proposalRecord={proposalRecord} />
+                </span>
+            </h1>
             <div className='detail-header__meta'>
-                <span>{formatTimestamp(proposalRecord.createdAt)}</span>
-                <span>{proposalRecord.status === 'executed' ? `executed ${formatRelativeTime(proposalRecord.executedAt)}` : `expires ${formatRelativeTime(proposalRecord.expiresAt)}`}</span>
-                <span>{proposalRecord.yesVoters.length} yes</span>
-                <span>{proposalRecord.noVoters.length} no</span>
-                <span>{proposalRecord.pendingVoters.length} pending</span>
+                <span>created {formatTimestamp(proposalRecord.createdAt)}</span>
+                <span>
+                    {proposalRecord.status === 'executed'
+                        ? `executed ${formatRelativeTime(proposalRecord.executedAt)}`
+                        : proposalRecord.status === 'expired'
+                            ? `expired ${formatRelativeTime(proposalRecord.expiresAt)}`
+                            : `expires ${formatRelativeTime(proposalRecord.expiresAt)}`}
+                </span>
+                <span className={`detail-header__status${proposalRecord.canExecute ? ' is-ready' : ''}`}>
+                    quorum {proposalRecord.yesVoters.length}/{minimumVotes}
+                </span>
                 {proposalRecord.userVote !== undefined && <span>you voted {proposalRecord.userVote ? 'YES' : 'NO'}</span>}
+                {proposalRecord.status === 'open' && proposalRecord.canExecute && <span className='detail-header__status is-ready'>ready to execute</span>}
             </div>
         </div>
     );
@@ -665,10 +729,11 @@ export function ProposalDetails() {
     }
 
     const isUser = storage.users.includes(userAddress);
+    const minimumVotes = Number(storage.minimum_votes || 0);
 
     return (
         <section className='proposal-detail'>
-            <ProposalHeader proposalRecord={proposalRecord} />
+            <ProposalHeader minimumVotes={minimumVotes} proposalRecord={proposalRecord} />
 
             <div className='proposal-detail__grid'>
                 <div className='proposal-detail__main'>

@@ -28,6 +28,30 @@ function looksBinary(text) {
     return controls > 5;
 }
 
+function getProposalTitle(text) {
+    const lines = (text || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+
+    for (const line of lines) {
+        const normalized = line.replace(/^['"#*\-\s]+|['"]+$/g, '').trim();
+
+        if (!normalized) {
+            continue;
+        }
+
+        if (/^[-_=]{4,}$/.test(normalized)) {
+            continue;
+        }
+
+        if (/^(about the|budget breakdown|documentation plan|attendance tracking|accessibility plan|applicant|event type)/i.test(normalized)) {
+            continue;
+        }
+
+        return normalized.slice(0, 120);
+    }
+
+    return undefined;
+}
+
 export function useIpfsText(cid) {
     const [state, setState] = useState({ status: 'idle', text: undefined, gateway: undefined, truncated: false, error: undefined });
 
@@ -192,13 +216,16 @@ export function VotePill({ address, operation, vote }) {
 export function ProposalSummary({ proposalRecord }) {
     const proposal = proposalRecord.proposal || proposalRecord.value || proposalRecord;
     const kind = proposalRecord.kind || getProposalKind(proposalRecord);
+    const cid = kind === 'text' ? (proposalRecord.ipfsCid || decodeIpfsPath(proposal.text)) : undefined;
+    const { text } = useIpfsText(cid);
 
     if (kind === 'text') {
-        const cid = proposalRecord.ipfsCid || decodeIpfsPath(proposal.text);
+        const title = proposalRecord.title?.trim() || getProposalTitle(text);
 
         return (
             <span>
-                review text at <span className='mono-text'>ipfs://{cid}</span>
+                {title || 'text proposal'}
+                {!title && <span className='proposal-summary__fallback-note'> (no title in payload)</span>}
             </span>
         );
     }
