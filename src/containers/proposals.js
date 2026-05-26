@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { Parser, emitMicheline } from '@taquito/michel-codec';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { TOKENS } from '../constants';
-import { CopyButton, KindBadge, ProposalIdLink, ProposalSummary, QuorumBar, VoteRow, VotePill, useIpfsText } from './dashboard-components';
+import { CopyButton, KindBadge, ProposalIdLink, ProposalSummary, QuorumBar, VoteRow, useIpfsText } from './dashboard-components';
 import { MultisigContext } from './context';
 import { DefaultLink, TezosAddressLink, TokenLink } from './links';
 import {
@@ -261,7 +261,7 @@ function ExecutedSummary({ proposalRecord }) {
     );
 }
 
-function AwaitingYouSection({ contractAddress, isUser, minimumVotes, proposals, onExecute, onVote, storage, userAddress }) {
+function AwaitingYouSection({ contractAddress, isUser, minimumVotes, proposals, onExecute, onVote, userAddress }) {
     if (!userAddress) {
         return (
             <ProposalSection title='Awaiting your vote' count={0} note='sync a multisig wallet to personalize this queue' className='awaiting-section'>
@@ -311,11 +311,20 @@ export function Proposals() {
 
     const isUser = storage.users.includes(userAddress);
     const minimumVotes = Number(storage.minimum_votes || 0);
+    const openProposals = proposalRecords.filter(proposalRecord => proposalRecord.status === 'open');
     const awaitingProposals = proposalRecords.filter(proposalRecord => proposalRecord.isAwaitingUser);
-    const activeProposals = proposalRecords.filter(proposalRecord => proposalRecord.status === 'open');
+    const activeProposals = isUser
+        ? openProposals.filter(proposalRecord => !proposalRecord.isAwaitingUser)
+        : openProposals;
     const executedProposals = proposalRecords.filter(proposalRecord => proposalRecord.status === 'executed');
     const expiredProposals = proposalRecords.filter(proposalRecord => proposalRecord.status === 'expired');
     const visibleExecutedProposals = showAllExecuted ? executedProposals : executedProposals.slice(0, 5);
+    const activeSectionNote = isUser
+        ? 'open proposals that no longer need your vote'
+        : `quorum ${minimumVotes} of ${storage.users.length}`;
+    const activeEmptyCopy = isUser && awaitingProposals.length > 0
+        ? 'Every open proposal that still needs your attention is already in the queue above.'
+        : 'There are no other open proposals right now.';
 
     return (
         <>
@@ -326,7 +335,7 @@ export function Proposals() {
                 awaitingCount={awaitingProposals.length}
             />
 
-            <PageIntro activeCount={activeProposals.length} awaitingCount={awaitingProposals.length} userAddress={userAddress} />
+            <PageIntro activeCount={openProposals.length} awaitingCount={awaitingProposals.length} userAddress={userAddress} />
 
             <AwaitingYouSection
                 contractAddress={contractAddress}
@@ -335,13 +344,12 @@ export function Proposals() {
                 proposals={awaitingProposals}
                 onExecute={executeProposal}
                 onVote={voteProposal}
-                storage={storage}
                 userAddress={userAddress}
             />
 
-            <ProposalSection title='Active proposals' count={activeProposals.length} note={`quorum ${minimumVotes} of ${storage.users.length}`}>
+            <ProposalSection title='Active proposals' count={activeProposals.length} note={activeSectionNote}>
                 {activeProposals.length === 0 ? (
-                    <EmptyState title='No other active proposals' copy='Every open proposal is either already handled or is waiting in the queue above.' />
+                    <EmptyState title='No other active proposals' copy={activeEmptyCopy} />
                 ) : (
                     <div className='proposal-table'>
                         {activeProposals.map(proposalRecord => (
@@ -546,26 +554,34 @@ function PayloadCard({ proposalRecord }) {
 
 function YourVoteCard({ isUser, proposalRecord, userAddress, onExecute, onVote }) {
     const voteOperation = userAddress ? proposalRecord.voteOperations[userAddress] : undefined;
+    const hasUserVote = proposalRecord.userVote !== undefined;
+    const voteLabel = proposalRecord.userVote ? 'YES' : 'NO';
 
     return (
         <div className='detail-card'>
             <div className='detail-card__header'>
                 <div className='detail-card__title'>
                     <span className='detail-card__label'>Your vote</span>
-                    {proposalRecord.userVote !== undefined ? (
+                    {hasUserVote ? (
                         <span className={`proposal-row__vote-state${proposalRecord.userVote ? ' is-yes' : ' is-no'}`}>
-                            {proposalRecord.userVote ? 'YES' : 'NO'}
+                            {voteLabel}
                         </span>
                     ) : (
                         <span className='proposal-row__status-copy'>not cast yet</span>
                     )}
                 </div>
-                {voteOperation && (
-                    <DefaultLink href={buildOperationLink(voteOperation.hash)} className='detail-card__link'>
-                        vote op
-                    </DefaultLink>
-                )}
             </div>
+
+            {hasUserVote && (
+                <div className='detail-card__subheader'>
+                    <span>you voted {voteLabel}</span>
+                    {voteOperation && (
+                        <DefaultLink href={buildOperationLink(voteOperation.hash)} className='detail-card__link'>
+                            tx {shortenAddress(voteOperation.hash, 4, 4)}
+                        </DefaultLink>
+                    )}
+                </div>
+            )}
 
             {proposalRecord.status !== 'open' && <p className='detail-card__message'>Voting is closed for this proposal.</p>}
 
@@ -575,8 +591,16 @@ function YourVoteCard({ isUser, proposalRecord, userAddress, onExecute, onVote }
 
             {proposalRecord.status === 'open' && isUser && (
                 <div className='detail-card__button-row'>
-                    <button onClick={() => onVote(proposalRecord.id, true)}>vote YES</button>
-                    <button onClick={() => onVote(proposalRecord.id, false)}>vote NO</button>
+                    {hasUserVote ? (
+                        <button onClick={() => onVote(proposalRecord.id, !proposalRecord.userVote)}>
+                            change to {proposalRecord.userVote ? 'NO' : 'YES'}
+                        </button>
+                    ) : (
+                        <>
+                            <button onClick={() => onVote(proposalRecord.id, true)}>vote YES</button>
+                            <button onClick={() => onVote(proposalRecord.id, false)}>vote NO</button>
+                        </>
+                    )}
                     {proposalRecord.canExecute && <button onClick={() => onExecute(proposalRecord.id)}>execute</button>}
                 </div>
             )}
@@ -700,7 +724,7 @@ function ProposalHeader({ minimumVotes, proposalRecord }) {
                     quorum {proposalRecord.yesVoters.length}/{minimumVotes}
                 </span>
                 {proposalRecord.userVote !== undefined && <span>you voted {proposalRecord.userVote ? 'YES' : 'NO'}</span>}
-                {proposalRecord.status === 'open' && proposalRecord.canExecute && <span className='detail-header__status is-ready'>ready to execute</span>}
+                {proposalRecord.status === 'open' && proposalRecord.canExecute && <span className='detail-header__status is-ready'>threshold met · executable now</span>}
             </div>
         </div>
     );

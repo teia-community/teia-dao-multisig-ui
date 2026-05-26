@@ -5,8 +5,6 @@ import { MultisigContext } from './context';
 import { DefaultLink, TezosAddressLink } from './links';
 import {
     buildAccountOperationsLink,
-    buildBigmapLink,
-    buildContractLink,
     buildMembersDirectory,
     buildProposalRecords,
 } from './utils';

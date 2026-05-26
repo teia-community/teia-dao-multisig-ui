@@ -9,6 +9,7 @@ import { formatMutezAmount } from './utils';
 export function Parameters() {
     // Get the required multisig context information
     const { userAddress, contractAddress, storage, balance, connectWallet, acceptMembership, leaveMultisig } = useContext(MultisigContext);
+    const pendingUsers = storage?.proposed_users || [];
     const summaryItems = [
         {
             label: 'wallet',
@@ -53,14 +54,14 @@ export function Parameters() {
                 <h2>Membership</h2>
                 <ul className='parameters-list'>
                     <li>Address: {userAddress ? <TezosAddressLink address={userAddress} /> : <Button text='sync wallet' onClick={() => connectWallet()} />}</li>
-                    {storage?.proposed_users.includes(userAddress) &&
+                    {storage?.proposed_users?.includes(userAddress) &&
                         <li>
                             <Button text='Accept membership' onClick={() => acceptMembership(true)} />
                             {' '}
                             <Button text='Decline membership' onClick={() => acceptMembership(false)} />
                         </li>
                     }
-                    {storage?.users.includes(userAddress) &&
+                    {storage?.users?.includes(userAddress) &&
                         <li>
                             <Button text='Leave multisig' onClick={leaveMultisig} />
                         </li>
@@ -68,7 +69,7 @@ export function Parameters() {
                 </ul>
             </section>
             <section className='parameters-section'>
-                <h2>Contract state</h2>
+                <h2>Roster</h2>
                 <div className='parameters-list'>
                     <div>
                         <h3>Multisig users</h3>
@@ -84,14 +85,23 @@ export function Parameters() {
                             ))}
                         </ul>
                     </div>
+                    {pendingUsers.length > 0 && (
+                        <div>
+                            <h3>Pending membership responses</h3>
+                            <ul className='users-list'>
+                                {pendingUsers.map((user, index) => (
+                                    <li key={`${user}-${index}`}>
+                                        <TezosAddressLink
+                                            address={user}
+                                            className={user === userAddress && 'is-user'}
+                                            useAlias
+                                        />
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
-                <ul className='parameters-list parameters-list--facts'>
-                    <li>Contract address: <TezosAddressLink address={contractAddress} /></li>
-                    <li>Network: {NETWORK}</li>
-                    <li>Positive votes needed to execute a proposal: {storage?.minimum_votes ?? '--'} votes</li>
-                    <li>Proposal expiration time: {storage?.expiration_time ?? '--'} days</li>
-                    <li>Balance: {balance === undefined ? '--' : formatMutezAmount(balance)} ꜩ</li>
-                </ul>
             </section>
         </div>
     );
