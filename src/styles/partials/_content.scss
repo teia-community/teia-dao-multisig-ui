@@ -37,6 +37,9 @@ p {
 
 nav {
     ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem 0.85rem;
         margin: 0;
         padding: 0;
 
@@ -46,13 +49,14 @@ nav {
     }
 
     li {
-        display: inline-block;
-        margin: 0 $small-margin $small-margin 0;
+        display: block;
+        margin: 0;
     }
 
     a {
         display: inline-block;
         color: $header-color;
+        white-space: nowrap;
 
         &:hover, &:focus, &.active {
             color: $header-color;
@@ -358,6 +362,13 @@ textarea {
     flex-wrap: wrap;
     gap: 0.4em;
     align-items: baseline;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.tezos-address-primary,
+.tezos-address-secondary {
+    overflow-wrap: anywhere;
 }
 
 .tezos-address-secondary {
@@ -456,6 +467,10 @@ textarea {
     text-decoration: none;
 }
 
+.members-table__proposal-link {
+    white-space: nowrap;
+}
+
 .footer-links__item {
     padding: 0;
     border: none;
@@ -529,6 +544,8 @@ textarea {
     font-family: monospace;
     font-size: 1em;
     line-height: 1.3;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .status-strip__value.is-emphasis {
@@ -673,6 +690,10 @@ textarea {
     min-width: 0;
 }
 
+.proposal-row__summary > * {
+    min-width: 0;
+}
+
 .proposal-row__summary-separator {
     color: $header-color;
 }
@@ -774,7 +795,9 @@ textarea {
 .quorum-bar__track,
 .participation-bar__track {
     position: relative;
-    flex: 0 0 14rem;
+    flex: 1 1 10rem;
+    min-width: 8rem;
+    max-width: 14rem;
     height: 0.55rem;
     border: $default-border;
     border-radius: $border-radius;
@@ -1032,19 +1055,25 @@ textarea {
     display: grid;
     grid-template-columns: 2.5rem 1fr;
     gap: $small-gap $default-gap;
-    align-items: center;
+    align-items: start;
 
     @media (min-width: $M) {
         grid-template-columns: 2.5rem minmax(10rem, 1fr) minmax(12rem, 1.2fr) minmax(16rem, 1.6fr) 7rem 4rem;
+        align-items: center;
     }
 }
 
 .members-table__head {
+    display: none;
     padding: 0 $small-padding $small-padding;
     font-family: monospace;
     font-size: 0.9em;
     color: $header-color;
     align-items: end;
+
+    @media (min-width: $M) {
+        display: grid;
+    }
 }
 
 .members-table__row {
@@ -1052,11 +1081,88 @@ textarea {
     border-top: $default-border;
 }
 
+.members-table__row > * {
+    min-width: 0;
+}
+
 .members-table__row.is-user {
     background-color: lighten(green, 71%);
     border-radius: $border-radius;
     padding-left: $small-padding;
     padding-right: $small-padding;
+}
+
+.members-table__member {
+    grid-column: 2;
+}
+
+.members-table__address {
+    grid-column: 2;
+}
+
+.members-table__address .tezos-address {
+    display: inline-flex;
+    max-width: 100%;
+}
+
+.members-table__participation {
+    grid-column: 1 / -1;
+}
+
+.members-table__actions {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: $small-gap;
+    align-items: center;
+}
+
+.members-table__address::before,
+.members-table__participation::before,
+.members-table__actions::before {
+    display: block;
+    width: 100%;
+    margin-bottom: 0.15rem;
+    font-family: monospace;
+    font-size: 0.8em;
+    color: $header-color;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+}
+
+.members-table__address::before {
+    content: 'address';
+}
+
+.members-table__participation::before {
+    content: 'participation';
+}
+
+.members-table__actions::before {
+    content: attr(data-label);
+}
+
+@media (min-width: $M) {
+    .members-table__address {
+        grid-column: 3;
+    }
+
+    .members-table__participation {
+        grid-column: 4;
+    }
+
+    .members-table__actions {
+        grid-column: 5 / 7;
+        display: grid;
+        grid-template-columns: 7rem 4rem;
+        justify-content: start;
+    }
+
+    .members-table__address::before,
+    .members-table__participation::before,
+    .members-table__actions::before {
+        display: none;
+    }
 }
 
 .parameters-section h2,
@@ -1139,6 +1245,122 @@ textarea {
     flex-wrap: wrap;
     gap: 0.35em;
     align-items: baseline;
+}
+
+@media (max-width: $S) {
+    h1 {
+        margin: 0.35rem 0;
+        font-size: 2rem;
+    }
+
+    .header-container {
+        padding-bottom: 0.35rem;
+    }
+
+    .sync-container {
+        gap: 0.35rem;
+    }
+
+    .sync-container .tezos-address {
+        flex: 1 1 100%;
+    }
+
+    button,
+    input,
+    .users-list a,
+    .proposal-votes {
+        font-size: 1em;
+    }
+
+    .page-intro {
+        margin-bottom: 0.75rem;
+    }
+
+    .page-intro__meta,
+    .dashboard-section__header-side,
+    .detail-card__header,
+    .detail-card__subheader {
+        align-items: flex-start;
+    }
+
+    .status-strip__item {
+        padding: 0.7rem 0.8rem;
+    }
+
+    .status-strip__value {
+        font-size: 0.95em;
+    }
+
+    .dashboard-section {
+        margin-bottom: 0.85rem;
+    }
+
+    .dashboard-section__header {
+        margin-bottom: 0.75rem;
+    }
+
+    .dashboard-section__links,
+    .detail-card__links,
+    .detail-card__header-actions {
+        width: 100%;
+    }
+
+    .proposal-row {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .proposal-row__actions {
+        gap: 0.35rem;
+    }
+
+    .proposal-row__vote-state,
+    .dashboard-section__link,
+    .proposal-id-link,
+    .detail-card__link,
+    .verify-links__item,
+    .members-table__proposal-link {
+        padding: 0.3em 0.6em;
+    }
+
+    .quorum-bar,
+    .participation-bar {
+        gap: 0.35rem 0.5rem;
+    }
+
+    .quorum-bar__track,
+    .participation-bar__track {
+        flex-basis: 100%;
+        min-width: 100%;
+        max-width: none;
+    }
+
+    .detail-card__header,
+    .detail-card__subheader,
+    .detail-card__content,
+    .detail-card__message,
+    .detail-card__stack,
+    .verify-links,
+    .vote-group,
+    .payload-grid {
+        padding: 0.8rem;
+    }
+
+    .payload-grid {
+        grid-template-columns: 1fr;
+        gap: 0.3rem;
+    }
+
+    .members-table__row {
+        gap: 0.35rem 0.75rem;
+    }
+
+    .members-table__actions {
+        gap: 0.35rem;
+    }
+
+    .app-footer__meta {
+        font-size: 0.9em;
+    }
 }
 
 .member-avatar {

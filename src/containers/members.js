@@ -10,12 +10,12 @@ import {
 } from './utils';
 
 
-function ParticipationBar({ eligible, no, yes }) {
+function ParticipationBar({ eligible, no, yes, className = '' }) {
     const yesWidth = eligible > 0 ? yes / eligible * 100 : 0;
     const noWidth = eligible > 0 ? no / eligible * 100 : 0;
 
     return (
-        <div className='participation-bar'>
+        <div className={`participation-bar ${className}`.trim()}>
             <div className='participation-bar__track'>
                 <span className='participation-bar__yes' style={{ width: `${yesWidth}%` }} />
                 <span className='participation-bar__no' style={{ width: `${noWidth}%`, left: `${yesWidth}%` }} />
@@ -87,18 +87,22 @@ export function MembersDirectory() {
                                 <strong>{alias || 'No alias'}</strong>
                                 {isUser && <span>(you)</span>}
                             </div>
-                            <TezosAddressLink address={row.address} shorten />
-                            <ParticipationBar eligible={row.eligible} no={row.no} yes={row.yes} />
-                            {row.lastProposalId ? (
-                                <Link to={`/proposals/${row.lastProposalId}`} className='members-table__proposal-link'>
-                                    #{row.lastProposalId}
-                                </Link>
-                            ) : (
-                                <span className='members-table__muted'>never voted</span>
-                            )}
-                            <DefaultLink href={buildAccountOperationsLink(row.address)} className='members-table__proposal-link'>
-                                ops
-                            </DefaultLink>
+                            <div className='members-table__address'>
+                                <TezosAddressLink address={row.address} shorten />
+                            </div>
+                            <ParticipationBar eligible={row.eligible} no={row.no} yes={row.yes} className='members-table__participation' />
+                            <div className='members-table__actions' data-label='history'>
+                                {row.lastProposalId ? (
+                                    <Link to={`/proposals/${row.lastProposalId}`} className='members-table__proposal-link members-table__last-vote'>
+                                        #{row.lastProposalId}
+                                    </Link>
+                                ) : (
+                                    <span className='members-table__muted members-table__last-vote'>never voted</span>
+                                )}
+                                <DefaultLink href={buildAccountOperationsLink(row.address)} className='members-table__proposal-link members-table__ops-link'>
+                                    ops
+                                </DefaultLink>
+                            </div>
                         </div>
                     );
                 })}

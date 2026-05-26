@@ -139,6 +139,9 @@
     .detail-card__message,
     .verify-links__label,
     .members-table__muted,
+    .members-table__address::before,
+    .members-table__participation::before,
+    .members-table__actions::before,
     .payload-grid__label,
     .members-table__head {
         color: $dark-muted;
