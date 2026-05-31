@@ -110,50 +110,68 @@ function PageIntro({ activeCount, awaitingCount, userAddress }) {
     );
 }
 
+// Compact duration like "45m", "23h", "3d" measured from a timestamp to now.
+function formatWaitingDuration(timestamp, now = Date.now()) {
+    if (!timestamp) {
+        return '';
+    }
+
+    const diff = Math.max(0, now - Date.parse(timestamp));
+    const minute = 60000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+
+    if (diff < hour) {
+        return `${Math.max(1, Math.round(diff / minute))}m`;
+    }
+
+    if (diff < day) {
+        return `${Math.round(diff / hour)}h`;
+    }
+
+    return `${Math.round(diff / day)}d`;
+}
+
 function StatusStrip({ contractAddress, storage, proposalRecords, awaitingCount }) {
-    const activeCount = proposalRecords.filter(proposalRecord => proposalRecord.status === 'open').length;
-    const items = [
-        {
-            label: 'contract',
-            value: shortenAddress(contractAddress, 6, 5),
-            extra: 'mainnet',
-            href: buildContractLink(contractAddress),
-        },
-        {
-            label: 'members',
-            value: storage?.users?.length || 0,
-            extra: `quorum ${storage?.minimum_votes || 0}`,
-        },
-        {
-            label: 'awaiting you',
-            value: awaitingCount,
-            extra: awaitingCount > 0 ? 'vote outstanding' : 'all caught up',
-            emphasis: awaitingCount > 0,
-        },
-        {
-            label: 'active',
-            value: activeCount,
-            extra: `${proposalRecords.filter(proposalRecord => proposalRecord.canExecute).length} ready to execute`,
-        },
-    ];
+    const openProposals = proposalRecords.filter(proposalRecord => proposalRecord.status === 'open');
+    const activeCount = openProposals.length;
+    const readyCount = proposalRecords.filter(proposalRecord => proposalRecord.canExecute).length;
+    const oldestOpen = openProposals.reduce(
+        (oldest, proposalRecord) => (!oldest || Date.parse(proposalRecord.createdAt) < Date.parse(oldest.createdAt) ? proposalRecord : oldest),
+        undefined);
+    const oldestWaiting = oldestOpen ? formatWaitingDuration(oldestOpen.createdAt) : undefined;
 
     return (
-        <div className='status-strip' aria-label='Multisig overview'>
-            {items.map(item => (
-                <div key={item.label} className='status-strip__item'>
-                    <span className='status-strip__label'>{item.label}</span>
-                    {item.href ? (
-                        <DefaultLink href={item.href} className='status-strip__value'>
-                            {item.value}
-                        </DefaultLink>
-                    ) : (
-                        <span className={`status-strip__value${item.emphasis ? ' is-emphasis' : ''}`}>
-                            {item.value}
-                        </span>
-                    )}
-                    <span className='status-strip__extra'>{item.extra}</span>
-                </div>
-            ))}
+        <div className='status-line' aria-label='Multisig overview'>
+            <p className='status-line__primary mono-text'>
+                <span className='status-line__caret'>{'▶'}</span>
+                <span className={`status-line__stat${awaitingCount > 0 ? ' is-attention' : ' is-muted'}`}>
+                    {awaitingCount} awaiting your vote
+                </span>
+                <span className='status-line__sep'>·</span>
+                <span className={`status-line__stat${readyCount > 0 ? ' is-ready' : ' is-muted'}`}>
+                    {readyCount} ready to execute
+                </span>
+                <span className='status-line__sep'>·</span>
+                <span className='status-line__stat'>{activeCount} active</span>
+                {oldestWaiting && (
+                    <>
+                        <span className='status-line__sep'>·</span>
+                        <span className='status-line__stat is-muted'>oldest waiting {oldestWaiting}</span>
+                    </>
+                )}
+            </p>
+            <p className='status-line__identity mono-text'>
+                <DefaultLink href={buildContractLink(contractAddress)} className='status-line__contract'>
+                    {shortenAddress(contractAddress, 6, 5)}
+                </DefaultLink>
+                <span className='status-line__sep'>·</span>
+                <span>mainnet</span>
+                <span className='status-line__sep'>·</span>
+                <span>{storage?.users?.length || 0} members</span>
+                <span className='status-line__sep'>·</span>
+                <span>quorum {storage?.minimum_votes || 0}</span>
+            </p>
         </div>
     );
 }

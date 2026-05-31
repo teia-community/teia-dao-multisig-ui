@@ -552,6 +552,62 @@ textarea {
     color: #2e7a4a;
 }
 
+.status-line {
+    margin-bottom: $default-margin;
+    padding: 0.85rem 1rem;
+    border: $default-border;
+    border-radius: $big-border-radius;
+    background-color: $section-background-color;
+    font-family: monospace;
+}
+
+.status-line__primary {
+    margin: 0;
+    font-size: 1em;
+    line-height: 1.5;
+}
+
+.status-line__identity {
+    margin: 0.35rem 0 0;
+    font-size: 0.85em;
+    color: $header-color;
+}
+
+.status-line__caret {
+    margin-right: 0.5em;
+    color: $header-color;
+}
+
+.status-line__sep {
+    margin: 0 0.5em;
+    color: $header-color;
+    opacity: 0.7;
+}
+
+.status-line__stat.is-attention {
+    color: #2e7a4a;
+    font-weight: 600;
+}
+
+.status-line__stat.is-ready {
+    color: #b07407;
+    font-weight: 600;
+}
+
+.status-line__stat.is-muted {
+    color: $header-color;
+}
+
+.status-line__contract {
+    font-family: monospace;
+    color: $header-color;
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
 .dashboard-section {
     margin-bottom: $default-margin;
 }

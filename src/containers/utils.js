@@ -90,9 +90,13 @@ export async function getVoteRecords(tokenVotesBigmap, network = NETWORK) {
 }
 
 // Returns the contract storage history from TzKT.
+// Note: the storage/history endpoint caps `limit` at 1000 (unlike bigmaps/keys
+// which allows 10000). Requesting more returns a 400, which would silently leave
+// storageHistory undefined and make every current member look eligible for every
+// proposal. 1000 snapshots is far more than this contract has accrued.
 export async function getStorageHistory(contractAddress, network = NETWORK) {
     const response = await axios.get(`https://api.${network}.tzkt.io/v1/contracts/${contractAddress}/storage/history`, {
-        params: { limit: 10000 }
+        params: { limit: 1000 }
     }).catch(error => console.log('Error while querying the contract storage history:', error));
 
     return response?.data;
@@ -599,6 +603,7 @@ export function buildMembersDirectory(proposalRecords, currentUsers) {
         let yes = 0;
         let no = 0;
         let lastProposalId;
+        const participationHistory = [];
 
         proposalRecords.forEach(proposalRecord => {
             const isEligible = proposalRecord.eligibleUsers.includes(address);
@@ -609,25 +614,38 @@ export function buildMembersDirectory(proposalRecords, currentUsers) {
 
             eligible += 1;
 
+            let state = 'missed';
+
             if (proposalRecord.votes[address] === true) {
                 yes += 1;
+                state = 'yes';
                 lastProposalId = Math.max(lastProposalId || 0, proposalRecord.id);
             }
 
             if (proposalRecord.votes[address] === false) {
                 no += 1;
+                state = 'no';
                 lastProposalId = Math.max(lastProposalId || 0, proposalRecord.id);
             }
+
+            participationHistory.push({
+                proposalId: proposalRecord.id,
+                label: proposalRecord.metadata?.label || proposalRecord.kind,
+                state,
+            });
         });
 
         const participation = yes + no;
+        const missed = Math.max(eligible - participation, 0);
 
         return {
             address,
             eligible,
             yes,
             no,
+            missed,
             participation,
+            participationHistory: participationHistory.reverse(),
             participationRate: eligible > 0 ? Math.round(participation * 100 / eligible) : 0,
             lastProposalId,
         };

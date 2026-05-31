@@ -154,6 +154,7 @@
     }
 
     .status-strip,
+    .status-line,
     .empty-state,
     .detail-card,
     .verify-links,
@@ -161,6 +162,22 @@
     .kind-badge {
         background-color: $dark-surface;
         border-color: $dark-border;
+    }
+
+    .status-line__identity,
+    .status-line__caret,
+    .status-line__sep,
+    .status-line__contract,
+    .status-line__stat.is-muted {
+        color: $dark-muted;
+    }
+
+    .status-line__stat.is-attention {
+        color: #8fd3a0;
+    }
+
+    .status-line__stat.is-ready {
+        color: #e0b257;
     }
 
     .verify-links--minimal {
