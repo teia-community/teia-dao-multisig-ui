@@ -142,6 +142,26 @@ export function Avatar({ address, size = '2.1rem' }) {
     );
 }
 
+export function DataLoadError({ failedDatasets = [], onRetry, className = '' }) {
+    return (
+        <section className={`dashboard-section data-load-error ${className}`.trim()} role='alert'>
+            <strong className='data-load-error__title'>Some multisig data failed to load</strong>
+            <p className='data-load-error__copy'>
+                Figures on this page may be missing or inaccurate. The indexer could not be reached for:
+            </p>
+            <ul className='data-load-error__list mono-text'>
+                {failedDatasets.map(name => <li key={name}>{name}</li>)}
+            </ul>
+            <p className='data-load-error__hint'>This is usually a temporary TzKT indexer issue.</p>
+            {onRetry && (
+                <button type='button' className='data-load-error__retry' onClick={onRetry}>
+                    retry
+                </button>
+            )}
+        </section>
+    );
+}
+
 export function KindBadge({ kind }) {
     const metadata = PROPOSAL_KIND_METADATA[kind];
 

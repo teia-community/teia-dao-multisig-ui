@@ -2,13 +2,14 @@ import React, { useContext } from 'react';
 import { NETWORK } from '../constants';
 import { MultisigContext } from './context';
 import { DefaultLink, TezosAddressLink } from './links';
+import { DataLoadError } from './dashboard-components';
 import { Button } from './button';
 import { buildContractLink, formatMutezAmount, shortenAddress } from './utils';
 
 
 export function Parameters() {
     // Get the required multisig context information
-    const { userAddress, contractAddress, storage, balance, userAliases, connectWallet, acceptMembership, leaveMultisig } = useContext(MultisigContext);
+    const { userAddress, contractAddress, storage, balance, userAliases, dataStatus, failedDatasets, reloadInformation, connectWallet, acceptMembership, leaveMultisig } = useContext(MultisigContext);
     const pendingUsers = storage?.proposed_users || [];
     const alias = userAliases && userAddress && userAliases[userAddress];
 
@@ -29,6 +30,10 @@ export function Parameters() {
                 <h1>Teia Core Team Multisig</h1>
                 <p className='page-intro__copy'>Contract state, membership status, and the current multisig roster.</p>
             </div>
+
+            {dataStatus === 'error' && (
+                <DataLoadError failedDatasets={failedDatasets} onRetry={reloadInformation} />
+            )}
 
             <div className='status-line' aria-label='Multisig overview'>
                 <p className='status-line__primary mono-text'>

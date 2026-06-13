@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { Parser, emitMicheline } from '@taquito/michel-codec';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { TOKENS } from '../constants';
-import { CopyButton, KindBadge, ProposalIdLink, ProposalSummary, QuorumBar, VoteRow, useIpfsText } from './dashboard-components';
+import { CopyButton, DataLoadError, KindBadge, ProposalIdLink, ProposalSummary, QuorumBar, VoteRow, useIpfsText } from './dashboard-components';
 import { MultisigContext } from './context';
 import { DefaultLink, TezosAddressLink, TokenLink } from './links';
 import {
@@ -320,8 +320,12 @@ function AwaitingYouSection({ contractAddress, isUser, minimumVotes, proposals, 
 }
 
 export function Proposals() {
-    const { contractAddress, executeProposal, proposalRecords, proposalOperations, proposals, storage, userAddress, voteOperations, voteProposal, voteRecords } = useProposalData();
+    const { contractAddress, dataStatus, executeProposal, failedDatasets, proposalRecords, proposalOperations, proposals, reloadInformation, storage, userAddress, voteOperations, voteProposal, voteRecords } = useProposalData();
     const [showAllExecuted, setShowAllExecuted] = useState(false);
+
+    if (dataStatus === 'error') {
+        return <DataLoadError failedDatasets={failedDatasets} onRetry={reloadInformation} />;
+    }
 
     if (!(storage && proposals && voteRecords && proposalOperations && voteOperations)) {
         return <LoadingState />;
@@ -750,7 +754,11 @@ function ProposalHeader({ minimumVotes, proposalRecord }) {
 
 export function ProposalDetails() {
     const params = useParams();
-    const { contractAddress, executeProposal, proposalRecords, proposals, storage, userAddress, voteOperations, voteProposal, voteRecords } = useProposalData();
+    const { contractAddress, dataStatus, executeProposal, failedDatasets, proposalRecords, proposals, reloadInformation, storage, userAddress, voteOperations, voteProposal, voteRecords } = useProposalData();
+
+    if (dataStatus === 'error') {
+        return <DataLoadError failedDatasets={failedDatasets} onRetry={reloadInformation} />;
+    }
 
     if (!(storage && proposals && voteRecords && voteOperations)) {
         return <LoadingState />;

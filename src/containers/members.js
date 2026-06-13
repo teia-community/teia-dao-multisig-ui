@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { Avatar } from './dashboard-components';
+import { Avatar, DataLoadError } from './dashboard-components';
 import { MultisigContext } from './context';
 import { DefaultLink, TezosAddressLink } from './links';
 import {
@@ -48,6 +48,10 @@ export function MembersDirectory() {
         storageHistory: context.storageHistory,
         userAddress: context.userAddress,
     });
+
+    if (context.dataStatus === 'error') {
+        return <DataLoadError failedDatasets={context.failedDatasets} onRetry={context.reloadInformation} />;
+    }
 
     if (!(context.storage && context.proposals && context.voteRecords)) {
         return <LoadingState />;

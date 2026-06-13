@@ -68,6 +68,16 @@ export class MultisigContextProvider extends React.Component {
             // The user votes
             userVotes: undefined,
 
+            // The load status of the core multisig data: 'loading' until the
+            // first load settles, then 'ready', or 'error' if any critical
+            // dataset failed to download. Lets the UI distinguish "still
+            // loading" from "failed to load" instead of spinning forever.
+            dataStatus: 'loading',
+
+            // Human-readable names of the critical datasets that failed to load,
+            // surfaced to members so they know what data may be missing.
+            failedDatasets: [],
+
             // The multisig contract reference
             contract: undefined,
 
@@ -94,6 +104,10 @@ export class MultisigContextProvider extends React.Component {
             setErrorMessage: (message) => this.setState({
                 errorMessage: message
             }),
+
+            // Re-downloads all the multisig information (used by the retry
+            // affordance when a load fails).
+            reloadInformation: () => this.loadInformation(),
 
             // Returns the multisig contract reference
             getContract: async () => {
@@ -463,6 +477,14 @@ export class MultisigContextProvider extends React.Component {
             // Initialize the new state dictionary
             const newState = {};
 
+            // Flip back to the loading state so a retry clears any prior error
+            this.setState({ dataStatus: 'loading' });
+
+            // Critical datasets whose absence makes the proposal, member and
+            // history views inaccurate. Tracked so we can tell members exactly
+            // what failed rather than spinning on a perpetual loading state.
+            let failedDatasets = ['contract storage'];
+
             console.log('Accessing the user address...');
             const userAddress = await utils.getUserAddress(wallet);
             newState.userAddress = userAddress;
@@ -498,6 +520,19 @@ export class MultisigContextProvider extends React.Component {
                 newState.voteOperations = voteOperations;
                 newState.executeOperations = executeOperations;
 
+                // Storage downloaded, so storage itself is not a failure; check
+                // each downstream dataset instead. (Aliases are cosmetic and the
+                // balance degrades gracefully, so neither is treated as critical.)
+                const criticalDatasets = {
+                    'proposals': proposals,
+                    'vote records': voteRecords,
+                    'storage history': storageHistory,
+                    'proposal operations': proposalOperations,
+                    'vote operations': voteOperations,
+                    'execute operations': executeOperations,
+                };
+                failedDatasets = Object.keys(criticalDatasets).filter(label => criticalDatasets[label] === undefined);
+
                 console.log('Downloading the multisig user aliases...');
                 const relevantAddresses = utils.collectRelevantAddresses(storage, proposals, voteRecords);
                 const userAliases = await utils.getUserAliases(relevantAddresses);
@@ -516,6 +551,10 @@ export class MultisigContextProvider extends React.Component {
                     newState.userVotes = userVotes;
                 }
             }
+
+            // Record what (if anything) failed so the UI can surface it
+            newState.failedDatasets = failedDatasets;
+            newState.dataStatus = failedDatasets.length > 0 ? 'error' : 'ready';
 
             // Update the component state
             this.setState(newState);
