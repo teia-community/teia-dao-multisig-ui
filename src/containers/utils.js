@@ -54,20 +54,48 @@ export async function getContract(tezos, contractAddress) {
         .catch(error => console.log('Error while accessing the contract:', error));
 }
 
+// Performs a GET request against the TzKT API.
+//
+// On failure it returns undefined (callers guard on missing data to show a
+// loading state) but — unlike a bare `.catch(log)` — it logs the HTTP status
+// and response body, so a request that the API rejects is diagnosable instead
+// of masquerading as an empty result. A silently-swallowed 400 from an
+// out-of-range `limit` is exactly what let the participation bug ship; see
+// getStorageHistory for the endpoint that caused it.
+//
+// It also warns when a paginated response comes back exactly full: that means
+// rows were left unfetched, and views that assume the complete set (eligibility
+// from storage history, vote tallies) would silently compute against partial
+// data. Better a loud warning now than wrong numbers later.
+async function tzktGet(label, url, params = undefined) {
+    try {
+        const response = await axios.get(url, params ? { params } : undefined);
+
+        if (Array.isArray(response.data) && params?.limit && response.data.length >= params.limit) {
+            console.warn(`${label}: returned ${response.data.length} rows at limit ${params.limit}; results may be truncated — add pagination before relying on the full set.`);
+        }
+
+        return response.data;
+    } catch (error) {
+        console.error(`${label} failed`, {
+            url,
+            params,
+            status: error.response?.status,
+            body: error.response?.data ?? String(error),
+        });
+
+        return undefined;
+    }
+}
+
 // Returns the contract storage
 export async function getContractStorage(contractAddress, network = NETWORK) {
-    const response = await axios.get(`https://api.${network}.tzkt.io/v1/contracts/${contractAddress}/storage`)
-        .catch(error => console.log('Error while querying the contract storage:', error));
-
-    return response?.data;
+    return await tzktGet('getContractStorage', `https://api.${network}.tzkt.io/v1/contracts/${contractAddress}/storage`);
 }
 
 // Returns the account balance in mutez
 export async function getBalance(account, network = NETWORK) {
-    const response = await axios.get(`https://api.${network}.tzkt.io/v1/accounts/${account}/balance`)
-        .catch(error => console.log('Error while querying the account balance:', error));
-
-    return response?.data;
+    return await tzktGet('getBalance', `https://api.${network}.tzkt.io/v1/accounts/${account}/balance`);
 }
 
 // Returns some bigmap keys
@@ -78,10 +106,9 @@ export async function getBigmapKeys(bigmap, extraParameters = {}, network = NETW
             select: 'key,value',
         },
         extraParameters);
-    const response = await axios.get(`https://api.${network}.tzkt.io/v1/bigmaps/${bigmap}/keys`, { params: parameters })
-        .catch(error => console.log('Error while querying the bigmap keys:', error));
+    const data = await tzktGet('getBigmapKeys', `https://api.${network}.tzkt.io/v1/bigmaps/${bigmap}/keys`, parameters);
 
-    return response?.data.reverse();
+    return data ? data.reverse() : data;
 }
 
 // Returns the full vote records from the multisig votes bigmap.
@@ -95,11 +122,7 @@ export async function getVoteRecords(tokenVotesBigmap, network = NETWORK) {
 // storageHistory undefined and make every current member look eligible for every
 // proposal. 1000 snapshots is far more than this contract has accrued.
 export async function getStorageHistory(contractAddress, network = NETWORK) {
-    const response = await axios.get(`https://api.${network}.tzkt.io/v1/contracts/${contractAddress}/storage/history`, {
-        params: { limit: 1000 }
-    }).catch(error => console.log('Error while querying the contract storage history:', error));
-
-    return response?.data;
+    return await tzktGet('getStorageHistory', `https://api.${network}.tzkt.io/v1/contracts/${contractAddress}/storage/history`, { limit: 1000 });
 }
 
 // Returns contract transactions matching the provided TzKT filters.
@@ -111,11 +134,8 @@ export async function getContractTransactions(contractAddress, extraParameters =
             target: contractAddress,
         },
         extraParameters);
-    const response = await axios.get(`https://api.${network}.tzkt.io/v1/operations/transactions`, {
-        params: parameters
-    }).catch(error => console.log('Error while querying contract transactions:', error));
 
-    return response?.data;
+    return await tzktGet('getContractTransactions', `https://api.${network}.tzkt.io/v1/operations/transactions`, parameters);
 }
 
 // Returns proposal-creation operations for the multisig contract.
