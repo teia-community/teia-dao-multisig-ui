@@ -130,8 +130,6 @@
     .dashboard-section__note,
     .dashboard-section__count,
     .proposal-summary__fallback-note,
-    .status-strip__label,
-    .status-strip__extra,
     .dashboard-section__subtitle,
     .proposal-row__status-copy,
     .detail-card__label,
@@ -153,7 +151,6 @@
         color: $dark-text;
     }
 
-    .status-strip,
     .status-line,
     .empty-state,
     .detail-card,
@@ -228,7 +225,6 @@
         background-color: $dark-no-vote;
     }
 
-    .status-strip__value.is-emphasis,
     .detail-header__status.is-ready,
     .quorum-bar__summary.is-ready,
     .proposal-row__vote-state.is-yes,

@@ -480,45 +480,6 @@ textarea {
     text-decoration: none;
 }
 
-.status-strip {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0;
-    margin-bottom: $default-margin;
-    border: $default-border;
-    border-radius: $big-border-radius;
-    background-color: $section-background-color;
-    overflow: hidden;
-
-    @media (min-width: $M) {
-        grid-template-columns: repeat(4, 1fr);
-    }
-}
-
-.status-strip--compact {
-    margin-bottom: 0;
-}
-
-.status-strip__item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2em;
-    padding: 0.85rem 1rem;
-    min-width: 0;
-
-    &:not(:first-child) {
-        border-top: $default-border;
-    }
-
-    @media (min-width: $M) {
-        &:not(:first-child) {
-            border-top: none;
-            border-left: $default-border;
-        }
-    }
-}
-
-.status-strip__label,
 .dashboard-section__subtitle,
 .proposal-row__status-copy,
 .payload-grid__label,
@@ -526,30 +487,16 @@ textarea {
 .detail-card__message,
 .detail-card__subheader,
 .verify-links__label,
-.members-table__muted,
-.status-strip__extra {
+.members-table__muted {
     color: $header-color;
 }
 
-.status-strip__label,
 .verify-links__label,
 .payload-grid__label,
 .detail-card__label {
     font-family: monospace;
     font-size: 0.8em;
     letter-spacing: 0.04em;
-}
-
-.status-strip__value {
-    font-family: monospace;
-    font-size: 1em;
-    line-height: 1.3;
-    min-width: 0;
-    overflow-wrap: anywhere;
-}
-
-.status-strip__value.is-emphasis {
-    color: #2e7a4a;
 }
 
 .status-line {
@@ -1337,14 +1284,6 @@ textarea {
     .detail-card__header,
     .detail-card__subheader {
         align-items: flex-start;
-    }
-
-    .status-strip__item {
-        padding: 0.7rem 0.8rem;
-    }
-
-    .status-strip__value {
-        font-size: 0.95em;
     }
 
     .dashboard-section {

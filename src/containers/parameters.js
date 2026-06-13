@@ -1,37 +1,27 @@
 import React, { useContext } from 'react';
 import { NETWORK } from '../constants';
 import { MultisigContext } from './context';
-import { TezosAddressLink } from './links';
+import { DefaultLink, TezosAddressLink } from './links';
 import { Button } from './button';
-import { formatMutezAmount } from './utils';
+import { buildContractLink, formatMutezAmount, shortenAddress } from './utils';
 
 
 export function Parameters() {
     // Get the required multisig context information
-    const { userAddress, contractAddress, storage, balance, connectWallet, acceptMembership, leaveMultisig } = useContext(MultisigContext);
+    const { userAddress, contractAddress, storage, balance, userAliases, connectWallet, acceptMembership, leaveMultisig } = useContext(MultisigContext);
     const pendingUsers = storage?.proposed_users || [];
-    const summaryItems = [
-        {
-            label: 'wallet',
-            value: userAddress ? <TezosAddressLink address={userAddress} shorten useAlias /> : 'not synced',
-            extra: userAddress ? 'connected' : 'sync to vote or propose',
-        },
-        {
-            label: 'contract',
-            value: contractAddress ? <TezosAddressLink address={contractAddress} shorten /> : 'unknown',
-            extra: NETWORK,
-        },
-        {
-            label: 'members',
-            value: storage ? storage.users.length : '--',
-            extra: storage ? `quorum ${storage.minimum_votes}` : 'loading contract state',
-        },
-        {
-            label: 'balance',
-            value: balance === undefined ? '--' : `${formatMutezAmount(balance)} XTZ`,
-            extra: storage ? `${storage.expiration_time} day expiry` : 'loading contract state',
-        },
-    ];
+    const alias = userAliases && userAddress && userAliases[userAddress];
+
+    let standing;
+    if (!storage) {
+        standing = { text: 'checking membership', className: 'is-muted' };
+    } else if (storage.users.includes(userAddress)) {
+        standing = { text: 'core team member', className: 'is-attention' };
+    } else if (storage.proposed_users.includes(userAddress)) {
+        standing = { text: 'membership invite pending', className: 'is-ready' };
+    } else {
+        standing = { text: 'not a member', className: 'is-muted' };
+    }
 
     return (
         <div className='parameters-page'>
@@ -40,14 +30,42 @@ export function Parameters() {
                 <p className='page-intro__copy'>Contract state, membership status, and the current multisig roster.</p>
             </div>
 
-            <div className='status-strip status-strip--compact'>
-                {summaryItems.map(item => (
-                    <div key={item.label} className='status-strip__item'>
-                        <span className='status-strip__label'>{item.label}</span>
-                        <span className='status-strip__value'>{item.value}</span>
-                        <span className='status-strip__extra'>{item.extra}</span>
-                    </div>
-                ))}
+            <div className='status-line' aria-label='Multisig overview'>
+                <p className='status-line__primary mono-text'>
+                    <span className='status-line__caret'>{'▶'}</span>
+                    {userAddress ? (
+                        <>
+                            <span className='status-line__stat is-muted'>synced as {alias || shortenAddress(userAddress, 6, 5)}</span>
+                            <span className='status-line__sep'>·</span>
+                            <span className={`status-line__stat ${standing.className}`}>{standing.text}</span>
+                        </>
+                    ) : (
+                        <>
+                            <span className='status-line__stat is-muted'>wallet not synced</span>
+                            <span className='status-line__sep'>·</span>
+                            <span className='status-line__stat is-muted'>sync to vote or propose</span>
+                        </>
+                    )}
+                </p>
+                <p className='status-line__identity mono-text'>
+                    {contractAddress ? (
+                        <DefaultLink href={buildContractLink(contractAddress)} className='status-line__contract'>
+                            {shortenAddress(contractAddress, 6, 5)}
+                        </DefaultLink>
+                    ) : (
+                        <span>unknown</span>
+                    )}
+                    <span className='status-line__sep'>·</span>
+                    <span>{NETWORK}</span>
+                    <span className='status-line__sep'>·</span>
+                    <span>{storage ? storage.users.length : '--'} members</span>
+                    <span className='status-line__sep'>·</span>
+                    <span>quorum {storage ? storage.minimum_votes : '--'}</span>
+                    <span className='status-line__sep'>·</span>
+                    <span>{balance === undefined ? '--' : `${formatMutezAmount(balance)} XTZ`}</span>
+                    <span className='status-line__sep'>·</span>
+                    <span>{storage ? `${storage.expiration_time} day expiry` : '--'}</span>
+                </p>
             </div>
 
             <section className='parameters-section'>
