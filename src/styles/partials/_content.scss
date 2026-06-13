@@ -744,9 +744,17 @@ textarea {
     align-items: center;
 }
 
-.proposal-row__identity,
 .proposal-row__actions {
     align-items: flex-start;
+}
+
+.proposal-row__identity {
+    align-items: center;
+}
+
+.history-summary {
+    gap: 0.2em 0.85em;
+    align-items: baseline;
 }
 
 .proposal-row__summary {

@@ -8,9 +8,9 @@
     $dark-surface:          #242424;
     $dark-elevated:         #323232;
     $dark-border:           #4d4d4d;
-    $dark-heading:          #f0f0f0;
+    $dark-heading:          #f4f4f4;
     $dark-text:             #e2e2e2;
-    $dark-muted:            #8f8f8f;
+    $dark-muted:            #b3b3b3;
     $dark-link:             #8888ff;
     $dark-button-bg:        #333333;
     $dark-button-hover:     #444444;
@@ -142,6 +142,9 @@
     .members-table__participation::before,
     .members-table__actions::before,
     .payload-grid__label,
+    .participation-bar__copy,
+    .proposal-row__summary-separator,
+    .create-proposal-warning,
     .members-table__head {
         color: $dark-muted;
     }
