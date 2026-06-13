@@ -264,42 +264,26 @@ function ExecutedSummary({ proposalRecord }) {
     );
 }
 
-function AwaitingYouSection({ contractAddress, isUser, minimumVotes, proposals, onExecute, onVote, userAddress }) {
-    if (!userAddress) {
-        return (
-            <ProposalSection title='Awaiting your vote' count={0} note='sync a multisig wallet to personalize this queue' className='awaiting-section'>
-                <EmptyState title='Wallet not connected' copy='Sync the wallet used for multisig voting to see the proposals that still need you.' />
-            </ProposalSection>
-        );
-    }
-
-    if (!isUser) {
-        return null;
-    }
-
+function AwaitingYouSection({ contractAddress, isUser, minimumVotes, proposals, onExecute, onVote }) {
     return (
         <ProposalSection
             title='Awaiting your vote'
             count={proposals.length}
             note='click any row to read the proposal and verify on-chain'
             className='awaiting-section'>
-            {proposals.length === 0 ? (
-                <EmptyState title='All caught up' copy='You have already handled every currently open proposal.' className='empty-state--success' />
-            ) : (
-                <div className='proposal-table'>
-                    {proposals.map(proposalRecord => (
-                        <ProposalRow
-                            key={proposalRecord.id}
-                            contractAddress={contractAddress}
-                            isUser={isUser}
-                            minimumVotes={minimumVotes}
-                            proposalRecord={proposalRecord}
-                            onExecute={onExecute}
-                            onVote={onVote}
-                        />
-                    ))}
-                </div>
-            )}
+            <div className='proposal-table'>
+                {proposals.map(proposalRecord => (
+                    <ProposalRow
+                        key={proposalRecord.id}
+                        contractAddress={contractAddress}
+                        isUser={isUser}
+                        minimumVotes={minimumVotes}
+                        proposalRecord={proposalRecord}
+                        onExecute={onExecute}
+                        onVote={onVote}
+                    />
+                ))}
+            </div>
         </ProposalSection>
     );
 }
@@ -329,9 +313,6 @@ export function Proposals() {
     const activeSectionNote = isUser
         ? 'open proposals that no longer need your vote'
         : `quorum ${minimumVotes} of ${storage.users.length}`;
-    const activeEmptyCopy = isUser && awaitingProposals.length > 0
-        ? 'Every open proposal that still needs your attention is already in the queue above.'
-        : 'There are no other open proposals right now.';
 
     return (
         <>
@@ -344,20 +325,19 @@ export function Proposals() {
                 awaitingCount={awaitingProposals.length}
             />
 
-            <AwaitingYouSection
-                contractAddress={contractAddress}
-                isUser={isUser}
-                minimumVotes={minimumVotes}
-                proposals={awaitingProposals}
-                onExecute={executeProposal}
-                onVote={voteProposal}
-                userAddress={userAddress}
-            />
+            {awaitingProposals.length > 0 && (
+                <AwaitingYouSection
+                    contractAddress={contractAddress}
+                    isUser={isUser}
+                    minimumVotes={minimumVotes}
+                    proposals={awaitingProposals}
+                    onExecute={executeProposal}
+                    onVote={voteProposal}
+                />
+            )}
 
-            <ProposalSection title='Active proposals' count={activeProposals.length} note={activeSectionNote}>
-                {activeProposals.length === 0 ? (
-                    <EmptyState title='No other active proposals' copy={activeEmptyCopy} />
-                ) : (
+            {activeProposals.length > 0 && (
+                <ProposalSection title='Active proposals' count={activeProposals.length} note={activeSectionNote}>
                     <div className='proposal-table'>
                         {activeProposals.map(proposalRecord => (
                             <ProposalRow
@@ -371,8 +351,8 @@ export function Proposals() {
                             />
                         ))}
                     </div>
-                )}
-            </ProposalSection>
+                </ProposalSection>
+            )}
 
             <ProposalSection
                 title='Executed proposals'
