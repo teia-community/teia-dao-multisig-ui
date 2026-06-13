@@ -28,7 +28,6 @@ export function Parameters() {
         <div className='parameters-page'>
             <div className='page-intro'>
                 <h1>Teia Core Team Multisig</h1>
-                <p className='page-intro__copy'>Contract state, membership status, and the current multisig roster.</p>
             </div>
 
             {dataStatus === 'error' && (
@@ -71,31 +70,28 @@ export function Parameters() {
                     <span className='status-line__sep'>·</span>
                     <span>{storage ? `${storage.expiration_time} day expiry` : '--'}</span>
                 </p>
+                <div className='status-line__membership'>
+                    {userAddress
+                        ? <TezosAddressLink address={userAddress} />
+                        : <span className='status-line__stat is-muted'>no wallet synced</span>}
+                    <div className='status-line__actions'>
+                        {!userAddress &&
+                            <Button text='sync wallet' onClick={() => connectWallet()} />}
+                        {storage?.proposed_users?.includes(userAddress) &&
+                            <>
+                                <Button text='Accept membership' onClick={() => acceptMembership(true)} />
+                                <Button text='Decline membership' onClick={() => acceptMembership(false)} />
+                            </>}
+                        {storage?.users?.includes(userAddress) &&
+                            <Button text='Leave multisig' onClick={leaveMultisig} />}
+                    </div>
+                </div>
             </div>
-
-            <section className='parameters-section'>
-                <h2>Membership</h2>
-                <ul className='parameters-list'>
-                    <li>Address: {userAddress ? <TezosAddressLink address={userAddress} /> : <Button text='sync wallet' onClick={() => connectWallet()} />}</li>
-                    {storage?.proposed_users?.includes(userAddress) &&
-                        <li>
-                            <Button text='Accept membership' onClick={() => acceptMembership(true)} />
-                            {' '}
-                            <Button text='Decline membership' onClick={() => acceptMembership(false)} />
-                        </li>
-                    }
-                    {storage?.users?.includes(userAddress) &&
-                        <li>
-                            <Button text='Leave multisig' onClick={leaveMultisig} />
-                        </li>
-                    }
-                </ul>
-            </section>
             <section className='parameters-section'>
                 <h2>Roster</h2>
                 <div className='parameters-list'>
                     <div>
-                        <h3>Multisig users</h3>
+                        {pendingUsers.length > 0 && <h3>Multisig users</h3>}
                         <ul className='users-list'>
                             {storage?.users.map((user, index) => (
                                 <li key={index}>

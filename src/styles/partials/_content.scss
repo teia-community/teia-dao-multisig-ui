@@ -416,7 +416,7 @@ textarea {
 }
 
 .parameters-page,
-.proposal-form-page {
+.create-proposals-page {
     display: grid;
     gap: $default-gap;
 }
@@ -553,6 +553,23 @@ textarea {
     &:hover {
         text-decoration: underline;
     }
+}
+
+.status-line__membership {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: $small-gap $default-gap;
+    margin-top: 0.7rem;
+    padding-top: 0.7rem;
+    border-top: $default-border;
+}
+
+.status-line__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $small-gap;
 }
 
 .dashboard-section {
@@ -1247,18 +1264,20 @@ textarea {
     padding-top: 0;
 }
 
-.proposal-form-page {
-    @media (min-width: $M) {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        align-items: start;
-    }
+.create-proposals-page {
+    max-width: 52rem;
 }
 
-.proposal-form-page > .page-intro,
-.proposal-form-page > .proposal-form-section--notice {
-    @media (min-width: $M) {
-        grid-column: 1 / -1;
-    }
+.proposal-type-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $small-gap;
+}
+
+.proposal-type-option.is-active {
+    border-color: darken(green, 15%);
+    background-color: $is-user-background-color;
+    font-weight: 600;
 }
 
 .proposal-form-section form {

@@ -87,25 +87,10 @@ function EmptyState({ title, copy, className = '' }) {
     );
 }
 
-function PageIntro({ activeCount, awaitingCount, userAddress }) {
+function PageIntro() {
     return (
         <div className='page-intro'>
             <h1>Multisig proposals</h1>
-            <div className='page-intro__meta mono-text'>
-                {userAddress ? (
-                    <>
-                        <span>
-                            you are <TezosAddressLink address={userAddress} useAlias shorten />
-                        </span>
-                        <span className='page-intro__separator'>-</span>
-                        <span>{activeCount} open</span>
-                        <span className='page-intro__separator'>-</span>
-                        <span>{awaitingCount} need your vote</span>
-                    </>
-                ) : (
-                    <span>connect a multisig wallet to personalize the active queue</span>
-                )}
-            </div>
         </div>
     );
 }
@@ -350,14 +335,14 @@ export function Proposals() {
 
     return (
         <>
+            <PageIntro />
+
             <StatusStrip
                 contractAddress={contractAddress}
                 storage={storage}
                 proposalRecords={proposalRecords}
                 awaitingCount={awaitingProposals.length}
             />
-
-            <PageIntro activeCount={openProposals.length} awaitingCount={awaitingProposals.length} userAddress={userAddress} />
 
             <AwaitingYouSection
                 contractAddress={contractAddress}

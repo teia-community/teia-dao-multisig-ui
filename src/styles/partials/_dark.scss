@@ -4,12 +4,13 @@
  */
 
 [data-theme="dark"] {
-    $dark-bg:               #1a1a1a;
+    $dark-bg:               #161616;
     $dark-surface:          #242424;
-    $dark-elevated:         #2d2d2d;
-    $dark-border:           #444444;
-    $dark-text:             #e0e0e0;
-    $dark-muted:            #aaaaaa;
+    $dark-elevated:         #323232;
+    $dark-border:           #4d4d4d;
+    $dark-heading:          #f0f0f0;
+    $dark-text:             #e2e2e2;
+    $dark-muted:            #8f8f8f;
     $dark-link:             #8888ff;
     $dark-button-bg:        #333333;
     $dark-button-hover:     #444444;
@@ -27,7 +28,7 @@
     }
 
     h1, h2, h3, h4, h5, h6 {
-        color: $dark-muted;
+        color: $dark-heading;
     }
 
     footer {
@@ -269,8 +270,14 @@
     .members-table__row,
     .detail-card__header,
     .detail-card__subheader,
+    .status-line__membership,
     .vote-pill__op {
         border-color: $dark-border;
+    }
+
+    .proposal-type-option.is-active {
+        border-color: #3f8d5b;
+        background-color: $dark-yes-vote;
     }
 
     .quorum-bar__track,

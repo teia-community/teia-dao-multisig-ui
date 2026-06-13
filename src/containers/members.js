@@ -62,12 +62,9 @@ export function MembersDirectory() {
     return (
         <section className='dashboard-section members-section'>
             <div className='dashboard-section__header'>
-                <div>
-                    <h2>Members</h2>
-                    <p className='dashboard-section__subtitle'>
-                        Participation is measured only across proposals where a member was eligible at proposal close or execution time.
-                    </p>
-                </div>
+                <p className='dashboard-section__subtitle'>
+                    Participation is measured only across proposals where a member was eligible at proposal close or execution time.
+                </p>
             </div>
 
             <div className='members-table'>

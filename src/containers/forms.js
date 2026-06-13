@@ -5,160 +5,141 @@ import { Button } from './button';
 import { IpfsLink } from './links';
 
 
+const PROPOSAL_TYPES = [
+    {
+        key: 'transfer_mutez',
+        label: 'Transfer tez',
+        summary: 'Transfer tez from the multisig to one or more tezos addresses.',
+    },
+    {
+        key: 'transfer_token',
+        label: 'Transfer token',
+        summary: 'Transfer FA2 token editions from the multisig to one or more tezos addresses.',
+    },
+    {
+        key: 'text',
+        label: 'Text',
+        summary: 'Approve a text or decision. No on-chain effect — the text is archived on IPFS and signals an off-chain action.',
+    },
+    {
+        key: 'lambda',
+        label: 'Lambda function',
+        summary: 'Execute Michelson lambda code as the multisig, e.g. to administer another contract the multisig owns or call a contract entry point.',
+        warning: 'Executing arbitrary smart contract code could compromise the multisig or have unexpected consequences. Have it reviewed by a trusted contract expert before voting.',
+    },
+    {
+        key: 'add_user',
+        label: 'Add user',
+        summary: 'Add a new member to the multisig.',
+        warning: 'The minimum vote threshold is not updated, so adding a member makes proposals easier to approve.',
+    },
+    {
+        key: 'remove_user',
+        label: 'Remove user',
+        summary: 'Remove one of the current multisig members.',
+        warning: 'The minimum vote threshold is not updated, so removing a member can make proposals harder to approve.',
+    },
+    {
+        key: 'minimum_votes',
+        label: 'Minimum votes',
+        summary: 'Change the minimum number of positive votes required to approve proposals.',
+        warning: 'Affects all active proposals at execution. Lowering it may make some immediately executable.',
+    },
+    {
+        key: 'expiration_time',
+        label: 'Expiration time',
+        summary: 'Change the proposals expiration time, in days.',
+        warning: 'Affects all active and expired proposals at execution. Raising it can revive expired proposals; lowering it can expire active ones.',
+    },
+];
+
+function NoticePage({ children }) {
+    return (
+        <div className='create-proposals-page'>
+            <div className='page-intro'>
+                <h1>Create proposals</h1>
+            </div>
+            <section className='proposal-form-section proposal-form-section--notice'>
+                <p>{children}</p>
+            </section>
+        </div>
+    );
+}
+
 export function CreateProposalForms() {
     // Get the multisig context
     const context = useContext(MultisigContext);
+    const [selected, setSelected] = useState(null);
 
     // Return if the user is not connected
     if (!context.userAddress) {
-        return (
-            <div className='proposal-form-page'>
-                <div className='page-intro'>
-                    <h1>Create proposals</h1>
-                    <p className='page-intro__copy'>Draft operational, treasury, and governance proposals for the multisig.</p>
-                </div>
-                <section className='proposal-form-section proposal-form-section--notice'>
-                    <p>You need to sync your wallet to be able to create proposals.</p>
-                </section>
-            </div>
-        );
+        return <NoticePage>You need to sync your wallet to be able to create proposals.</NoticePage>;
     }
 
     // Return if the user is not one of the multisig users
     if (!context.storage?.users.includes(context.userAddress)) {
-        return (
-            <div className='proposal-form-page'>
-                <div className='page-intro'>
-                    <h1>Create proposals</h1>
-                    <p className='page-intro__copy'>Draft operational, treasury, and governance proposals for the multisig.</p>
-                </div>
-                <section className='proposal-form-section proposal-form-section--notice'>
-                    <p>Only multisig users can create new proposals.</p>
-                </section>
-            </div>
-        );
+        return <NoticePage>Only multisig users can create new proposals.</NoticePage>;
     }
 
+    const activeType = PROPOSAL_TYPES.find(type => type.key === selected);
+
+    const renderForm = () => {
+        switch (selected) {
+            case 'transfer_mutez':
+                return <TransferTezProposalForm handleSubmit={context.createTransferMutezProposal} />;
+            case 'transfer_token':
+                return <TransferTokenProposalForm handleSubmit={context.createTransferTokenProposal} />;
+            case 'text':
+                return <TextProposalForm uploadFileToIpfs={context.uploadFileToIpfs} handleSubmit={context.createTextProposal} />;
+            case 'lambda':
+                return <LambdaFunctionProposalForm handleSubmit={context.createLambdaFunctionProposal} />;
+            case 'add_user':
+                return <AddUserProposalForm handleSubmit={context.createAddUserProposal} />;
+            case 'remove_user':
+                return <RemoveUserProposalForm users={context.storage.users} aliases={context.userAliases} handleSubmit={context.createRemoveUserProposal} />;
+            case 'minimum_votes':
+                return <MinimumVotesProposalForm defaultValue={context.storage.minimum_votes} handleSubmit={context.createMinimumVotesProposal} />;
+            case 'expiration_time':
+                return <ExpirationTimeProposalForm defaultValue={context.storage.expiration_time} handleSubmit={context.createExpirationTimeProposal} />;
+            default:
+                return null;
+        }
+    };
+
     return (
-        <div className='proposal-form-page'>
+        <div className='create-proposals-page'>
             <div className='page-intro'>
                 <h1>Create proposals</h1>
-                <p className='page-intro__copy'>Use the matching proposal type below, review the warnings carefully, and keep payloads explicit enough for on-chain verification.</p>
             </div>
 
-            <section className='proposal-form-section'>
-                <h2>Transfer tez proposal</h2>
-                <p>
-                    Use this form to create a proposal that, if accepted, it will transfer
-                    the specified amount of tez from the multisig to a list of tezos addresses.
-                </p>
-                <TransferTezProposalForm handleSubmit={context.createTransferMutezProposal} />
-            </section>
+            <div className='proposal-type-picker' role='tablist' aria-label='Proposal type'>
+                {PROPOSAL_TYPES.map(type => (
+                    <button
+                        key={type.key}
+                        type='button'
+                        role='tab'
+                        aria-selected={selected === type.key}
+                        className={`proposal-type-option${selected === type.key ? ' is-active' : ''}`}
+                        onClick={() => setSelected(type.key)}>
+                        {type.label}
+                    </button>
+                ))}
+            </div>
 
-            <section className='proposal-form-section'>
-                <h2>Transfer token proposal</h2>
-                <p>
-                    Use this form to create a proposal that, if accepted, it will transfer
-                    the specified amount of token editions from the multisig to a list of tezos addresses.
-                </p>
-                <TransferTokenProposalForm handleSubmit={context.createTransferTokenProposal} />
-            </section>
-
-            <section className='proposal-form-section'>
-                <h2>Text proposal</h2>
-                <p>
-                    Use this form to create a proposal to approve a text or decission.
-                </p>
-                <p>
-                    This proposal has no direct consequences on the blockchain. However, if accepted and executed,
-                    it should trigger some off-chain actions by one of the multisig members (e.g. change a website UI,
-                    decide on a dog name, buy bread at the bakery). The text will be stored in IPFS for archival purposes.
-                </p>
-                <TextProposalForm
-                    uploadFileToIpfs={context.uploadFileToIpfs}
-                    handleSubmit={context.createTextProposal}
-                />
-            </section>
-
-            <section className='proposal-form-section'>
-                <h2>Lambda function proposal</h2>
-                <p>
-                    Use this form to create a proposal that, if accepted, it will execute some smart contract code
-                    stored in a Michelson lambda function.
-                </p>
-                <p>
-                    This proposal could be used to administer other smart contracts of which the multsign is the admin
-                    (e.g. to update some smart contract fees), or to execute entry points from other contracts (e.g. swap
-                    or collect a token, vote in another DAO / multisig).
-                </p>
-                <p className='create-proposal-warning'>
-                    Warning: Executing arbitrary smart contract code could compromise the multisig or have unexpected
-                    consequences. The lambda function code should have been revised by some trusted smart contract expert
-                    before the proposal is accepted and executed.
-                </p>
-                <LambdaFunctionProposalForm handleSubmit={context.createLambdaFunctionProposal} />
-            </section>
-
-            <section className='proposal-form-section'>
-                <h2>Add user proposal</h2>
-                <p>
-                    Use this form to create a proposal that, if accepted, it will add a new user to the multisig.
-                </p>
-                <p className='create-proposal-warning'>
-                    Warning: The minimum number of positive votes required to approve a proposal will not be updated,
-                    so adding a new user will effectively make easier to approve proposals.
-                </p>
-                <AddUserProposalForm handleSubmit={context.createAddUserProposal} />
-            </section>
-
-            <section className='proposal-form-section'>
-                <h2>Remove user proposal</h2>
-                <p>
-                    Use this form to create a proposal that, if accepted, it will remove one of the multisig users.
-                </p>
-                <p className='create-proposal-warning'>
-                    Warning: The minimum number of votes required to approve a proposal will not be updated. Depending
-                    on the situation, it might become more difficult to approve proposals.
-                </p>
-                <RemoveUserProposalForm
-                    users={context.storage.users}
-                    aliases={context.userAliases}
-                    handleSubmit={context.createRemoveUserProposal}
-                />
-            </section>
-
-            <section className='proposal-form-section'>
-                <h2>Minimum votes proposal</h2>
-                <p>
-                    Use this form to create a proposal that, if accepted, it will change the minimum number of positive
-                    votes required to approve proposals.
-                </p>
-                <p className='create-proposal-warning'>
-                    Warning: This will affect all active proposals at the time of execution. If the minimum votes is decreased,
-                    some active proposals might become accepted and it will be possible to execute them.
-                </p>
-                <MinimumVotesProposalForm
-                    defaultValue={context.storage.minimum_votes}
-                    handleSubmit={context.createMinimumVotesProposal}
-                />
-            </section>
-
-            <section className='proposal-form-section'>
-                <h2>Expiration time proposal</h2>
-                <p>
-                    Use this form to create a proposal that, if accepted, it will change the proposals expiration time.
-                </p>
-                <p className='create-proposal-warning'>
-                    Warning: This will affect all active and expired proposals at the time of execution. If the expiration
-                    time is increased, some expired proposals might become active again. Some might even become executable if
-                    they have enough positive votes. If the expiration time is decreased, some previously active proposal might
-                    become expired.
-                </p>
-                <ExpirationTimeProposalForm
-                    defaultValue={context.storage.expiration_time}
-                    handleSubmit={context.createExpirationTimeProposal}
-                />
-            </section>
+            {activeType ? (
+                <section className='proposal-form-section'>
+                    <h2>{activeType.label} proposal</h2>
+                    <p>{activeType.summary}</p>
+                    {activeType.warning && (
+                        <p className='create-proposal-warning'>Warning: {activeType.warning}</p>
+                    )}
+                    {renderForm()}
+                </section>
+            ) : (
+                <section className='proposal-form-section proposal-form-section--notice'>
+                    <p>Choose a proposal type above to begin.</p>
+                </section>
+            )}
         </div>
     );
 }
