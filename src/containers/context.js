@@ -50,8 +50,33 @@ export class MultisigContextProvider extends React.Component {
             // The multisig proposals
             proposals: undefined,
 
+            // The multisig vote records
+            voteRecords: undefined,
+
+            // The proposal creation operations
+            proposalOperations: undefined,
+
+            // The proposal vote operations
+            voteOperations: undefined,
+
+            // The proposal execution operations
+            executeOperations: undefined,
+
+            // The contract storage history
+            storageHistory: undefined,
+
             // The user votes
             userVotes: undefined,
+
+            // The load status of the core multisig data: 'loading' until the
+            // first load settles, then 'ready', or 'error' if any critical
+            // dataset failed to download. Lets the UI distinguish "still
+            // loading" from "failed to load" instead of spinning forever.
+            dataStatus: 'loading',
+
+            // Human-readable names of the critical datasets that failed to load,
+            // surfaced to members so they know what data may be missing.
+            failedDatasets: [],
 
             // The multisig contract reference
             contract: undefined,
@@ -79,6 +104,10 @@ export class MultisigContextProvider extends React.Component {
             setErrorMessage: (message) => this.setState({
                 errorMessage: message
             }),
+
+            // Re-downloads all the multisig information (used by the retry
+            // affordance when a load fails).
+            reloadInformation: () => this.loadInformation(),
 
             // Returns the multisig contract reference
             getContract: async () => {
@@ -143,9 +172,8 @@ export class MultisigContextProvider extends React.Component {
                 // Wait for the confirmation
                 await this.state.confirmOperation(operation);
 
-                // Update the proposals
-                const proposals = await utils.getBigmapKeys(this.state.storage.proposals);
-                this.setState({ proposals: proposals });
+                // Reload the multisig information to keep proposal metadata in sync
+                await this.loadInformation();
             },
 
             // Creates a text proposal
@@ -356,14 +384,8 @@ export class MultisigContextProvider extends React.Component {
                 // Wait for the confirmation
                 await this.state.confirmOperation(operation);
 
-                // Update the proposals and the user votes
-                const storage = this.state.storage;
-                const proposals = await utils.getBigmapKeys(storage.proposals);
-                const userVotes = await utils.getUserVotes(this.state.userAddress, storage.votes);
-                this.setState({
-                    proposals: proposals,
-                    userVotes: userVotes
-                });
+                // Reload the multisig information to refresh votes and tallies
+                await this.loadInformation();
             },
 
             // Executes a proposal
@@ -382,17 +404,8 @@ export class MultisigContextProvider extends React.Component {
                 // Wait for the confirmation
                 await this.state.confirmOperation(operation);
 
-                // Update the storage, the balance, the user aliases and the proposals
-                const storage = await utils.getContractStorage(this.state.contractAddress);
-                const balance = await utils.getBalance(this.state.contractAddress);
-                const userAliases = await utils.getUserAliases(storage.users.concat(storage.proposed_users));
-                const proposals = await utils.getBigmapKeys(storage.proposals);
-                this.setState({
-                    storage: storage,
-                    balance: balance,
-                    userAliases: userAliases,
-                    proposals: proposals
-                });
+                // Reload the multisig information to refresh execution state and membership
+                await this.loadInformation();
             },
 
             // Accepts the multisig membership
@@ -411,13 +424,8 @@ export class MultisigContextProvider extends React.Component {
                 // Wait for the confirmation
                 await this.state.confirmOperation(operation);
 
-                // Update the storage and the user aliases
-                const storage = await utils.getContractStorage(this.state.contractAddress);
-                const userAliases = await utils.getUserAliases(storage.users.concat(storage.proposed_users));
-                this.setState({
-                    storage: storage,
-                    userAliases: userAliases
-                });
+                // Reload the multisig information to refresh membership state
+                await this.loadInformation();
             },
 
             // The user leaves the multisig
@@ -436,13 +444,8 @@ export class MultisigContextProvider extends React.Component {
                 // Wait for the confirmation
                 await this.state.confirmOperation(operation);
 
-                // Update the storage and the user aliases
-                const storage = await utils.getContractStorage(this.state.contractAddress);
-                const userAliases = await utils.getUserAliases(storage.users.concat(storage.proposed_users));
-                this.setState({
-                    storage: storage,
-                    userAliases: userAliases
-                });
+                // Reload the multisig information to refresh membership state
+                await this.loadInformation();
             },
 
             // Uploads a file to ipfs and returns the ipfs path
@@ -472,35 +475,86 @@ export class MultisigContextProvider extends React.Component {
         // Loads all the needed information at once
         this.loadInformation = async () => {
             // Initialize the new state dictionary
-            const newState = {}
+            const newState = {};
+
+            // Flip back to the loading state so a retry clears any prior error
+            this.setState({ dataStatus: 'loading' });
+
+            // Critical datasets whose absence makes the proposal, member and
+            // history views inaccurate. Tracked so we can tell members exactly
+            // what failed rather than spinning on a perpetual loading state.
+            let failedDatasets = ['contract storage'];
 
             console.log('Accessing the user address...');
             const userAddress = await utils.getUserAddress(wallet);
             newState.userAddress = userAddress;
 
             console.log('Downloading the multisig contract storage...');
-            const storage = await utils.getContractStorage(this.state.contractAddress);
-            newState.storage = storage;
-
             console.log('Getting the multisig tez balance...');
-            const balance = await utils.getBalance(this.state.contractAddress);
+            const [storage, balance] = await Promise.all([
+                utils.getContractStorage(this.state.contractAddress),
+                utils.getBalance(this.state.contractAddress)
+            ]);
+            newState.storage = storage;
             newState.balance = balance;
 
             if (storage) {
+                console.log('Downloading the multisig proposals...');
+                console.log('Downloading the multisig votes...');
+                console.log('Downloading the multisig storage history...');
+                console.log('Downloading the proposal operations...');
+                console.log('Downloading the vote operations...');
+                console.log('Downloading the execute operations...');
+                const [proposals, voteRecords, storageHistory, proposalOperations, voteOperations, executeOperations] = await Promise.all([
+                    utils.getBigmapKeys(storage.proposals),
+                    utils.getVoteRecords(storage.votes),
+                    utils.getStorageHistory(this.state.contractAddress),
+                    utils.getProposalOperations(this.state.contractAddress),
+                    utils.getVoteOperations(this.state.contractAddress),
+                    utils.getExecuteOperations(this.state.contractAddress)
+                ]);
+                newState.proposals = proposals;
+                newState.voteRecords = voteRecords;
+                newState.storageHistory = storageHistory;
+                newState.proposalOperations = proposalOperations;
+                newState.voteOperations = voteOperations;
+                newState.executeOperations = executeOperations;
+
+                // Storage downloaded, so storage itself is not a failure; check
+                // each downstream dataset instead. (Aliases are cosmetic and the
+                // balance degrades gracefully, so neither is treated as critical.)
+                const criticalDatasets = {
+                    'proposals': proposals,
+                    'vote records': voteRecords,
+                    'storage history': storageHistory,
+                    'proposal operations': proposalOperations,
+                    'vote operations': voteOperations,
+                    'execute operations': executeOperations,
+                };
+                failedDatasets = Object.keys(criticalDatasets).filter(label => criticalDatasets[label] === undefined);
+
                 console.log('Downloading the multisig user aliases...');
-                const userAliases = await utils.getUserAliases(storage.users.concat(storage.proposed_users));
+                const relevantAddresses = utils.collectRelevantAddresses(storage, proposals, voteRecords);
+                const userAliases = await utils.getUserAliases(relevantAddresses);
                 newState.userAliases = userAliases;
 
-                console.log('Downloading the multisig proposals...');
-                const proposals = await utils.getBigmapKeys(storage.proposals);
-                newState.proposals = proposals;
-
                 if (userAddress) {
-                    console.log('Downloading the user votes...');
-                    const userVotes = await utils.getUserVotes(userAddress, storage.votes);
+                    const votesByProposal = utils.buildVoteLookup(voteRecords);
+                    const userVotes = {};
+
+                    Object.keys(votesByProposal).forEach(proposalId => {
+                        if (votesByProposal[proposalId][userAddress] !== undefined) {
+                            userVotes[proposalId] = votesByProposal[proposalId][userAddress];
+                        }
+                    });
+
                     newState.userVotes = userVotes;
                 }
             }
+
+            // Record what (if anything) failed so the UI can surface it
+            newState.failedDatasets = failedDatasets;
+            newState.dataStatus = failedDatasets.length > 0 ? 'error' : 'ready';
 
             // Update the component state
             this.setState(newState);
@@ -510,15 +564,8 @@ export class MultisigContextProvider extends React.Component {
     componentDidMount() {
         // Beacon SDK v4+ requires an active subscription for ACTIVE_ACCOUNT_SET.
         // This fires after requestPermissions and keeps the user address in sync.
-        wallet.client.subscribeToEvent(BeaconEvent.ACTIVE_ACCOUNT_SET, async (account) => {
-            const userAddress = account?.address;
-            const newState = { userAddress, userVotes: undefined, contract: undefined };
-
-            if (userAddress && this.state.storage) {
-                newState.userVotes = await utils.getUserVotes(userAddress, this.state.storage.votes);
-            }
-
-            this.setState(newState);
+        wallet.client.subscribeToEvent(BeaconEvent.ACTIVE_ACCOUNT_SET, async () => {
+            await this.loadInformation();
         });
 
         // Load all the relevant information

@@ -4,18 +4,19 @@
  */
 
 [data-theme="dark"] {
-    $dark-bg:               #1a1a1a;
+    $dark-bg:               #161616;
     $dark-surface:          #242424;
-    $dark-elevated:         #2d2d2d;
-    $dark-border:           #444444;
-    $dark-text:             #e0e0e0;
-    $dark-muted:            #aaaaaa;
+    $dark-elevated:         #323232;
+    $dark-border:           #4d4d4d;
+    $dark-heading:          #f4f4f4;
+    $dark-text:             #e2e2e2;
+    $dark-muted:            #b3b3b3;
     $dark-link:             #8888ff;
     $dark-button-bg:        #333333;
     $dark-button-hover:     #444444;
-    $dark-yes-vote:         #1a3020;
-    $dark-yes-vote-hover:   #224028;
-    $dark-no-vote:          #3a1a1a;
+    $dark-yes-vote:         #203427;
+    $dark-yes-vote-hover:   #294230;
+    $dark-no-vote:          #412125;
 
     body {
         background-color: $dark-bg;
@@ -27,7 +28,7 @@
     }
 
     h1, h2, h3, h4, h5, h6 {
-        color: $dark-muted;
+        color: $dark-heading;
     }
 
     footer {
@@ -120,5 +121,202 @@
     .confirmation-message,
     .error-message {
         background-color: $dark-surface;
+    }
+
+    .tezos-address-secondary,
+    .app-footer__meta,
+    .page-intro__meta,
+    .page-intro__copy,
+    .page-intro__separator,
+    .dashboard-section__note,
+    .dashboard-section__count,
+    .proposal-summary__fallback-note,
+    .dashboard-section__subtitle,
+    .proposal-row__status-copy,
+    .detail-card__label,
+    .detail-card__subheader,
+    .detail-card__message,
+    .verify-links__label,
+    .members-table__muted,
+    .members-table__address::before,
+    .members-table__participation::before,
+    .members-table__actions::before,
+    .payload-grid__label,
+    .participation-bar__copy,
+    .proposal-row__summary-separator,
+    .create-proposal-warning,
+    .members-table__head {
+        color: $dark-muted;
+    }
+
+    .nav-badge {
+        border-color: $dark-border;
+        background-color: $dark-yes-vote;
+        color: $dark-text;
+    }
+
+    .status-line,
+    .empty-state,
+    .detail-card,
+    .verify-links,
+    .vote-pill,
+    .kind-badge {
+        background-color: $dark-surface;
+        border-color: $dark-border;
+    }
+
+    .status-line__identity,
+    .status-line__caret,
+    .status-line__sep,
+    .status-line__contract,
+    .status-line__stat.is-muted {
+        color: $dark-muted;
+    }
+
+    .status-line__stat.is-attention {
+        color: #8fd3a0;
+    }
+
+    .status-line__stat.is-ready {
+        color: #e0b257;
+    }
+
+    .data-load-error {
+        background-color: #2c1d1f;
+        border-color: #7a3b3b;
+    }
+
+    .data-load-error__title {
+        color: #ff9a9a;
+    }
+
+    .data-load-error__hint {
+        color: $dark-muted;
+    }
+
+    .data-load-error__retry {
+        background-color: $dark-button-bg;
+        border-color: $dark-border;
+        color: $dark-text;
+
+        &:hover {
+            background-color: $dark-button-hover;
+        }
+    }
+
+    .verify-links--minimal {
+        background: none;
+        border-top-color: $dark-border;
+    }
+
+    .verify-links--minimal .verify-links__item,
+    .footer-links__item,
+    .app-footer__inline-link {
+        border: none;
+    }
+
+    .kind-badge--text,
+    .kind-badge--expiration-time,
+    .kind-badge--minimum-votes {
+        background-color: #243149;
+    }
+
+    .kind-badge--add-user {
+        background-color: #1f3626;
+    }
+
+    .kind-badge--remove-user {
+        background-color: #442020;
+    }
+
+    .kind-badge--transfer-mutez,
+    .kind-badge--transfer-token,
+    .kind-badge--lambda-function {
+        background-color: #4a361e;
+    }
+
+    .awaiting-section {
+        border-color: #3d5c45;
+        background-color: #212823;
+    }
+
+    .empty-state--success,
+    .members-table__row.is-user,
+    .vote-pill--yes,
+    .proposal-row__vote-state.is-yes {
+        background-color: $dark-yes-vote;
+    }
+
+    .vote-pill--no,
+    .proposal-row__vote-state.is-no {
+        background-color: $dark-no-vote;
+    }
+
+    .detail-header__status.is-ready,
+    .quorum-bar__summary.is-ready,
+    .proposal-row__vote-state.is-yes,
+    .history-summary__yes,
+    .history-summary__vote.is-yes,
+    .participation-bar__copy strong {
+        color: #8fd3a0;
+    }
+
+    .proposal-row__vote-state.is-no,
+    .history-summary__no,
+    .history-summary__vote.is-no,
+    .participation-bar__no-copy {
+        color: #ff9a9a;
+    }
+
+    .proposal-row,
+    .vote-group,
+    .members-table__row,
+    .detail-card__header,
+    .detail-card__subheader,
+    .status-line__membership,
+    .vote-pill__op {
+        border-color: $dark-border;
+    }
+
+    .proposal-type-option.is-active {
+        border-color: #3f8d5b;
+        background-color: $dark-yes-vote;
+    }
+
+    .quorum-bar__track,
+    .participation-bar__track {
+        background-color: #181818;
+        border-color: $dark-border;
+    }
+
+    .proposal-row:hover,
+    .proposal-row:focus-visible,
+    .proposal-row:focus-within {
+        background-color: #2a2a2a;
+        outline-color: #555555;
+    }
+
+    .quorum-bar__yes,
+    .participation-bar__yes {
+        background-color: #366f4a;
+    }
+
+    .quorum-bar__yes.is-ready {
+        background-color: #3f8d5b;
+    }
+
+    .detail-card__content,
+    .micheline-code {
+        background-color: $dark-elevated;
+    }
+
+    .create-proposal-warning {
+        border-left-color: #8a6535;
+    }
+
+    .member-avatar {
+        border-color: $dark-border;
+        color: $dark-text;
+        background: hsl(var(--avatar-hue), 25%, 28%);
     }
 }
