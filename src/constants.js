@@ -3,7 +3,7 @@ export const NETWORK = 'mainnet';
 
 export const CONTRACT_ADDRESS = 'KT1J9FYz29RBQi1oGLw8uXyACrzXzV1dHuvb';
 
-export const RPC_NODE = 'https://mainnet.api.tez.ie';
+export const RPC_NODE = 'https://mainnet.teia.rocks';
 
 export const IPFS_UPLOAD_PROXY = 'https://ipfsproxy.teia.rocks';
 
