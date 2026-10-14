@@ -5,9 +5,9 @@ export const CONTRACT_ADDRESS = 'KT1J9FYz29RBQi1oGLw8uXyACrzXzV1dHuvb';
 
 export const RPC_NODE = 'https://mainnet.teia.rocks';
 
-export const IPFS_UPLOAD_PROXY = 'https://ipfsproxy.teia.rocks';
+export const IPFS_UPLOAD_PROXY = 'https://ipfsmsg.teia.art';
 
-export const IPFS_GATEWAY = 'https://ipfs.io/ipfs/';
+export const IPFS_GATEWAY = 'https://ipfsmsg.teia.art/ipfs/';
 
 export const TOKENS = [
     {
