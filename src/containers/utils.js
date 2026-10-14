@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { CONTRACT_ADDRESS, NETWORK, IPFS_UPLOAD_PROXY } from '../constants';
+import { CONTRACT_ADDRESS, NETWORK, IPFS_UPLOAD_PROXY, TOKENS } from '../constants';
 
 
 export const IPFS_GATEWAYS = ['ipfsmsg.teia.art', 'cache.teia.rocks'];
@@ -35,7 +35,7 @@ export const PROPOSAL_KIND_METADATA = {
     minimum_votes: { short: 'THRS', label: 'change minimum votes' },
     remove_user: { short: '-MEM', label: 'remove member' },
     text: { short: 'TEXT', label: 'text proposal' },
-    transfer_mutez: { short: 'XTZ', label: 'transfer mutez' },
+    transfer_mutez: { short: 'XTZ', label: 'transfer tez' },
     transfer_token: { short: 'FA2', label: 'transfer token' }
 };
 
@@ -281,6 +281,37 @@ export function formatMutezAmount(mutez) {
     return tez.toLocaleString('en-US', {
         maximumFractionDigits: tez >= 1 ? 2 : 6
     });
+}
+
+// Returns the known token for an FA2 contract and token id, if any.
+export function findToken(fa2, tokenId) {
+    return TOKENS.find(token => token.fa2 === fa2 && (token.tokenId === undefined || token.tokenId === String(tokenId)));
+}
+
+// Formats an integer amount of token base units using the given decimals.
+// Uses BigInt so that large amounts are shown exactly.
+export function formatTokenAmount(amount, decimals = 0) {
+    const raw = BigInt(amount || 0);
+    const base = BigInt('1' + '0'.repeat(decimals));
+    const whole = (raw / base).toLocaleString('en-US');
+    const fraction = (raw % base).toString().padStart(decimals, '0').replace(/0+$/, '');
+
+    return fraction ? `${whole}.${fraction}` : whole;
+}
+
+// Converts a decimal amount string into an integer string of base units.
+// Returns undefined if the amount is not a non-negative number with at most
+// the given number of decimals.
+export function toBaseUnits(amount, decimals = 0) {
+    const match = String(amount).trim().match(/^(\d*)(?:\.(\d*))?$/);
+
+    if (!match || (!match[1] && !match[2]) || (match[2] || '').length > decimals) {
+        return undefined;
+    }
+
+    const [, whole, fraction = ''] = match;
+
+    return BigInt((whole || '0') + fraction.padEnd(decimals, '0')).toString();
 }
 
 // Formats a timestamp consistently in UTC.

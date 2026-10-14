@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { TOKENS } from '../constants';
 import { DefaultLink, TezosAddressLink, TokenLink } from './links';
 import {
     buildIpfsGatewayLink,
     buildOperationLink,
     buildProposalStorageLink,
     decodeIpfsPath,
+    findToken,
     formatMutezAmount,
+    formatTokenAmount,
     getProposalKind,
     IPFS_GATEWAYS,
     PROPOSAL_KIND_METADATA,
@@ -176,6 +177,25 @@ export function KindBadge({ kind }) {
     );
 }
 
+// Displays an amount of token base units, using the token decimals when the token is known.
+export function TokenAmount({ amount, token, showRaw }) {
+    if (!token) {
+        return <span className='mono-text'>{formatTokenAmount(amount)} <span className='token-amount__raw'>raw units</span></span>;
+    }
+
+    const formatted = <span className='mono-text'>{formatTokenAmount(amount, token.decimals)}{token.symbol ? ` ${token.symbol}` : ''}</span>;
+
+    if (!showRaw || token.decimals === 0) {
+        return formatted;
+    }
+
+    return (
+        <>
+            {formatted} <span className='token-amount__raw'>({formatTokenAmount(amount)} base units)</span>
+        </>
+    );
+}
+
 export function QuorumBar({ yesCount, noCount, pendingCount, threshold }) {
     const safeThreshold = Math.max(threshold, 1);
     const yesWidth = Math.min(yesCount, safeThreshold) / safeThreshold * 100;
@@ -268,13 +288,23 @@ export function ProposalSummary({ proposalRecord }) {
 
     if (kind === 'transfer_token') {
         const tokenTransfers = proposal.token_transfers;
-        const token = TOKENS.find(currentToken => currentToken.fa2 === tokenTransfers.fa2);
-        const total = tokenTransfers.distribution.reduce((sum, transfer) => sum + Number(transfer.amount || 0), 0);
+        const token = findToken(tokenTransfers.fa2, tokenTransfers.token_id);
+        const total = tokenTransfers.distribution.reduce((sum, transfer) => sum + BigInt(transfer.amount || 0), BigInt(0));
+        const destinations = `${tokenTransfers.distribution.length} destination${tokenTransfers.distribution.length === 1 ? '' : 's'}`;
+
+        if (token?.symbol) {
+            return (
+                <span>
+                    transfer <TokenAmount amount={total} token={token} /> to {destinations}
+                </span>
+            );
+        }
+
         const label = token ? (token.multiasset ? `token #${tokenTransfers.token_id}` : token.name) : tokenTransfers.fa2;
 
         return (
             <span>
-                transfer <span className='mono-text'>{total.toLocaleString('en-US')}</span> to {tokenTransfers.distribution.length} destination{tokenTransfers.distribution.length === 1 ? '' : 's'} from <TokenLink fa2={tokenTransfers.fa2} id={tokenTransfers.token_id}>{label}</TokenLink>
+                transfer <TokenAmount amount={total} token={token} /> to {destinations} from <TokenLink fa2={tokenTransfers.fa2} id={tokenTransfers.token_id}>{label}</TokenLink>
             </span>
         );
     }

@@ -197,7 +197,7 @@ export class MultisigContextProvider extends React.Component {
             // Creates a transfer mutez proposal
             createTransferMutezProposal: async (transfers) => {
                 // Loop over the transfers information
-                let totalAmount = 0;
+                let totalAmount = BigInt(0);
 
                 for (const transfer of transfers) {
                     // Check that the destination address is a valid address
@@ -208,11 +208,11 @@ export class MultisigContextProvider extends React.Component {
                         return;
                     }
 
-                    totalAmount += transfer.amount;
+                    totalAmount += BigInt(transfer.amount);
                 }
 
                 // Check that the total amount is smaller thant the contract balance
-                if (totalAmount > this.state.balance) {
+                if (this.state.balance !== undefined && totalAmount > BigInt(this.state.balance)) {
                     this.state.setErrorMessage('The total amount of tez to transfer is larger than the current contract balance');
                     return;
                 }

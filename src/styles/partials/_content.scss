@@ -411,8 +411,13 @@ textarea {
 .page-intro__separator,
 .dashboard-section__note,
 .dashboard-section__count,
-.proposal-summary__fallback-note {
+.proposal-summary__fallback-note,
+.token-amount__raw {
     color: $header-color;
+}
+
+.token-amount__raw {
+    font-size: 0.9em;
 }
 
 .parameters-page,

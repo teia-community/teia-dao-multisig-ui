@@ -1,8 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { Parser, emitMicheline } from '@taquito/michel-codec';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { TOKENS } from '../constants';
-import { CopyButton, DataLoadError, KindBadge, ProposalIdLink, ProposalSummary, QuorumBar, VoteRow, useIpfsText } from './dashboard-components';
+import { CopyButton, DataLoadError, KindBadge, ProposalIdLink, ProposalSummary, QuorumBar, TokenAmount, VoteRow, useIpfsText } from './dashboard-components';
 import { MultisigContext } from './context';
 import { DefaultLink, TezosAddressLink, TokenLink } from './links';
 import {
@@ -14,6 +13,7 @@ import {
     buildProposalRecords,
     buildProposalStorageLink,
     buildVoteOperationsLink,
+    findToken,
     formatMutezAmount,
     formatRelativeTime,
     formatTimestamp,
@@ -462,7 +462,7 @@ function IpfsPanel({ cid }) {
 
 function PayloadCard({ proposalRecord }) {
     const proposal = proposalRecord.proposal;
-    const token = proposal.kind.transfer_token ? TOKENS.find(currentToken => currentToken.fa2 === proposal.token_transfers.fa2) : undefined;
+    const token = proposal.kind.transfer_token ? findToken(proposal.token_transfers.fa2, proposal.token_transfers.token_id) : undefined;
     let rows;
 
     if (proposalRecord.kind === 'transfer_mutez') {
@@ -486,7 +486,7 @@ function PayloadCard({ proposalRecord }) {
                     <div className='payload-list'>
                         {proposal.token_transfers.distribution.map((transfer, index) => (
                             <span key={`${transfer.destination}-${index}`}>
-                                <span className='mono-text'>{Number(transfer.amount).toLocaleString('en-US')}</span>
+                                <TokenAmount amount={transfer.amount} token={token} showRaw />
                                 {' to '}
                                 <TezosAddressLink address={transfer.destination} useAlias shorten />
                             </span>
