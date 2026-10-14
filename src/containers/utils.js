@@ -2,7 +2,7 @@ import axios from 'axios';
 import { CONTRACT_ADDRESS, NETWORK, IPFS_UPLOAD_PROXY } from '../constants';
 
 
-export const IPFS_GATEWAYS = ['ipfs.io', 'dweb.link', 'w3s.link'];
+export const IPFS_GATEWAYS = ['ipfsmsg.teia.art', 'cache.teia.rocks'];
 
 export const PROPOSAL_ENTRYPOINTS = {
     add_user: 'add_user_proposal',
