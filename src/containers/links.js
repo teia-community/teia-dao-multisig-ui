@@ -22,10 +22,10 @@ export function TzktLink(props) {
 
 export function TezosAddressLink(props) {
     // Get the required multisig context information
-    const { userAliases } = useContext(MultisigContext);
+    const { userAliases, contractsInfo } = useContext(MultisigContext);
 
-    // Get the user alias
-    const alias = userAliases && userAliases[props.address];
+    // Get the user alias, or the TzKT alias for contracts
+    const alias = (userAliases && userAliases[props.address]) || contractsInfo?.[props.address]?.alias;
     const shortened = props.shorten ? shortenAddress(props.address, 5, 5) : props.address;
 
     let content = props.children;

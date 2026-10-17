@@ -44,8 +44,14 @@ export class MultisigContextProvider extends React.Component {
             // The multisig contract mutez balance
             balance: undefined,
 
+            // The multisig token balances, keyed by utils.tokenBalanceKey
+            tokenBalances: undefined,
+
             // The multisig user aliases
             userAliases: undefined,
+
+            // The TzKT alias and multisig member count of contracts referenced in proposals
+            contractsInfo: undefined,
 
             // The multisig proposals
             proposals: undefined,
@@ -196,9 +202,8 @@ export class MultisigContextProvider extends React.Component {
 
             // Creates a transfer mutez proposal
             createTransferMutezProposal: async (transfers) => {
-                // Loop over the transfers information
-                let totalAmount = 0;
-
+                // Loop over the transfers information. Amounts above the current
+                // balance are allowed, since the multisig can be funded before execution
                 for (const transfer of transfers) {
                     // Check that the destination address is a valid address
                     const destination = transfer.destination;
@@ -207,14 +212,6 @@ export class MultisigContextProvider extends React.Component {
                         this.state.setErrorMessage(`The provided address is not a valid tezos address: ${destination}`);
                         return;
                     }
-
-                    totalAmount += transfer.amount;
-                }
-
-                // Check that the total amount is smaller thant the contract balance
-                if (totalAmount > this.state.balance) {
-                    this.state.setErrorMessage('The total amount of tez to transfer is larger than the current contract balance');
-                    return;
                 }
 
                 // Get the multisig contract reference
@@ -235,7 +232,8 @@ export class MultisigContextProvider extends React.Component {
                     return;
                 }
 
-                // Loop over the transfers information
+                // Loop over the transfers information. Amounts above the current
+                // balance are allowed, since the multisig can be funded before execution
                 for (const transfer of transfers) {
                     // Check that the destination address is a valid address
                     const destination = transfer.destination;
@@ -491,12 +489,15 @@ export class MultisigContextProvider extends React.Component {
 
             console.log('Downloading the multisig contract storage...');
             console.log('Getting the multisig tez balance...');
-            const [storage, balance] = await Promise.all([
+            console.log('Getting the multisig token balances...');
+            const [storage, balance, tokenBalances] = await Promise.all([
                 utils.getContractStorage(this.state.contractAddress),
-                utils.getBalance(this.state.contractAddress)
+                utils.getBalance(this.state.contractAddress),
+                utils.getTokenBalances(this.state.contractAddress)
             ]);
             newState.storage = storage;
             newState.balance = balance;
+            newState.tokenBalances = tokenBalances;
 
             if (storage) {
                 console.log('Downloading the multisig proposals...');
@@ -534,9 +535,14 @@ export class MultisigContextProvider extends React.Component {
                 failedDatasets = Object.keys(criticalDatasets).filter(label => criticalDatasets[label] === undefined);
 
                 console.log('Downloading the multisig user aliases...');
+                console.log('Downloading the referenced contracts information...');
                 const relevantAddresses = utils.collectRelevantAddresses(storage, proposals, voteRecords);
-                const userAliases = await utils.getUserAliases(relevantAddresses);
+                const [userAliases, contractsInfo] = await Promise.all([
+                    utils.getUserAliases(relevantAddresses),
+                    utils.getContractsInfo(relevantAddresses)
+                ]);
                 newState.userAliases = userAliases;
+                newState.contractsInfo = contractsInfo;
 
                 if (userAddress) {
                     const votesByProposal = utils.buildVoteLookup(voteRecords);

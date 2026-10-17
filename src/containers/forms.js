@@ -3,6 +3,8 @@ import { TOKENS } from '../constants';
 import { MultisigContext } from './context';
 import { Button } from './button';
 import { IpfsLink } from './links';
+import { TezAmount, TokenAmount } from './dashboard-components';
+import { findToken, toBaseUnits, tokenBalanceKey } from './utils';
 
 
 const PROPOSAL_TYPES = [
@@ -144,7 +146,30 @@ export function CreateProposalForms() {
     );
 }
 
+// Returns the sum of the valid transfer amounts, in base units
+function sumBaseUnits(transfers, decimals) {
+    return transfers.reduce((sum, transfer) => sum + BigInt(toBaseUnits(transfer.amount, decimals) ?? 0), BigInt(0));
+}
+
+// Warns when the transfers add up to more than the multisig currently holds.
+// The proposal can still be created, since the multisig can be funded before execution.
+function BalanceWarning({ total, balance, renderAmount }) {
+    if (balance === undefined || total <= BigInt(balance)) {
+        return null;
+    }
+
+    return (
+        <p className='create-proposal-warning'>
+            Warning: the multisig currently holds {renderAmount(balance)}, which is {renderAmount(total - BigInt(balance))} less
+            than this proposal sends. You can still create it, but it can only be executed once the multisig holds enough.
+        </p>
+    );
+}
+
 function TransferTezProposalForm(props) {
+    // Get the required multisig context information
+    const { balance, setErrorMessage } = useContext(MultisigContext);
+
     // Set the component state
     const [transfers, setTransfers] = useState([
         { amount: 0, destination: '' }
@@ -195,12 +220,22 @@ function TransferTezProposalForm(props) {
     // Define the on submit handler
     const handleSubmit = e => {
         e.preventDefault();
-        props.handleSubmit(
-            transfers.map((transfer) => ({
-                amount: transfer.amount * 1000000,
-                destination: transfer.destination
-            }))
-        );
+
+        // Convert the tez amounts to mutez without floating point rounding
+        const newTransfers = [];
+
+        for (const transfer of transfers) {
+            const amount = toBaseUnits(transfer.amount, 6);
+
+            if (amount === undefined) {
+                setErrorMessage(`Invalid tez amount: ${transfer.amount}. Amounts can have at most 6 decimals.`);
+                return;
+            }
+
+            newTransfers.push({ amount: amount, destination: transfer.destination });
+        }
+
+        props.handleSubmit(newTransfers);
     };
 
     return (
@@ -239,18 +274,46 @@ function TransferTezProposalForm(props) {
                 {' '}
                 <Button text='-' onClick={e => handleClick(e, false)} />
             </div>
+            <BalanceWarning total={sumBaseUnits(transfers, 6)} balance={balance} renderAmount={amount => <TezAmount mutez={amount} />} />
             <input type='submit' value='send proposal' />
         </form>
     );
 }
 
 function TransferTokenProposalForm(props) {
+    // Get the required multisig context information
+    const { setErrorMessage, tokenBalances } = useContext(MultisigContext);
+
     // Set the component state
     const [tokenContract, setTokenContract] = useState('');
     const [tokenId, setTokenId] = useState('');
     const [transfers, setTransfers] = useState([
         { amount: 0, destination: '' }
     ]);
+
+    // Amounts are entered in whole tokens for known fungible tokens, and in
+    // base units (editions) otherwise
+    const token = findToken(tokenContract, tokenId);
+    const decimals = token ? token.decimals : 0;
+    const step = decimals > 0 ? `0.${'0'.repeat(decimals - 1)}1` : '1';
+    const amountLabel = token?.symbol ? `Amount (${token.symbol})` : (token ? 'Token editions' : 'Amount (raw token units)');
+
+    // Tokens the multisig does not hold are missing from the balances, so they count as zero
+    const tokenBalance = tokenBalances !== undefined && tokenContract && tokenId !== ''
+        ? (tokenBalances[tokenBalanceKey(tokenContract, tokenId)] || '0')
+        : undefined;
+
+    // Define the token contract on change handler
+    const handleTokenContractChange = value => {
+        setTokenContract(value);
+
+        // Fill in the token id for known fungible tokens
+        const knownToken = TOKENS.find(currentToken => currentToken.fa2 === value && currentToken.tokenId !== undefined);
+
+        if (knownToken) {
+            setTokenId(knownToken.tokenId);
+        }
+    };
 
     // Define the on change handler
     const handleChange = (index, parameter, value) => {
@@ -298,11 +361,21 @@ function TransferTokenProposalForm(props) {
     const handleSubmit = e => {
         e.preventDefault();
 
-        // Create a new transfers array that makes use of the correct decimals
-        const token = TOKENS.find(token => token.fa2 === tokenContract);
-        const newTransfers = transfers.map(transfer => (
-            { amount: token ? transfer.amount * token.decimals : transfer.amount, destination: transfer.destination }
-        ));
+        // Create a new transfers array with the amounts in token base units
+        const newTransfers = [];
+
+        for (const transfer of transfers) {
+            const amount = toBaseUnits(transfer.amount, decimals);
+
+            if (amount === undefined) {
+                setErrorMessage(decimals > 0
+                    ? `Invalid ${token.symbol} amount: ${transfer.amount}. Amounts can have at most ${decimals} decimals.`
+                    : `Invalid token amount: ${transfer.amount}. Amounts must be whole numbers.`);
+                return;
+            }
+
+            newTransfers.push({ amount: amount, destination: transfer.destination });
+        }
 
         // Submit the proposal
         props.handleSubmit(tokenContract, tokenId, newTransfers);
@@ -322,7 +395,7 @@ function TransferTokenProposalForm(props) {
                         className='contract-address-input'
                         value={tokenContract}
                         onMouseDown={() => setTokenContract('')}
-                        onChange={e => setTokenContract(e.target.value)}
+                        onChange={e => handleTokenContractChange(e.target.value)}
                     />
                     <datalist id='tokenContracts'>
                         <option value=''></option>
@@ -346,15 +419,18 @@ function TransferTokenProposalForm(props) {
                 <div className='transfers-input'>
                     {transfers.map((transfer, index) => (
                         <div key={index} className='transfer-input'>
-                            <label>Token editions:
+                            <label>{amountLabel}:
                                 {' '}
                                 <input
                                     type='number'
-                                    min='1'
-                                    step='1'
+                                    min={step}
+                                    step={step}
                                     value={transfer.amount}
                                     onChange={e => handleChange(index, 'amount', e.target.value)}
                                 />
+                                {decimals > 0 && toBaseUnits(transfer.amount, decimals) !== undefined && (
+                                    <span className='token-amount__raw'> = {toBaseUnits(transfer.amount, decimals)} base units</span>
+                                )}
                             </label>
                             <br />
                             <label>Destination address:
@@ -376,6 +452,7 @@ function TransferTokenProposalForm(props) {
                 {' '}
                 <Button text='-' onClick={e => handleClick(e, false)} />
             </div>
+            <BalanceWarning total={sumBaseUnits(transfers, decimals)} balance={tokenBalance} renderAmount={amount => <TokenAmount amount={amount} token={token} />} />
             <input type='submit' value='send proposal' />
         </form>
     );

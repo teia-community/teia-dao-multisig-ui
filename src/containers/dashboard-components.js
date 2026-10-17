@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { TOKENS } from '../constants';
+import React, { useContext, useEffect, useState } from 'react';
+import { MultisigContext } from './context';
 import { DefaultLink, TezosAddressLink, TokenLink } from './links';
 import {
     buildIpfsGatewayLink,
     buildOperationLink,
     buildProposalStorageLink,
     decodeIpfsPath,
+    findToken,
     formatMutezAmount,
+    formatTokenAmount,
     getProposalKind,
     IPFS_GATEWAYS,
     PROPOSAL_KIND_METADATA,
@@ -176,6 +178,42 @@ export function KindBadge({ kind }) {
     );
 }
 
+// Displays an amount of token base units, using the token decimals when the token is known.
+// Hovering the amount shows the base units, which is what wallets and TzKT display.
+export function TokenAmount({ amount, token }) {
+    if (!token) {
+        return <span className='token-amount'>{formatTokenAmount(amount)} <span className='token-amount__raw'>raw units</span></span>;
+    }
+
+    return (
+        <span className='token-amount' title={token.decimals > 0 ? `${formatTokenAmount(amount)} base units` : undefined}>
+            {formatTokenAmount(amount, token.decimals)}{token.symbol ? ` ${token.symbol}` : ''}
+        </span>
+    );
+}
+
+// Displays a tez amount from mutez. Hovering the amount shows the mutez.
+export function TezAmount({ mutez }) {
+    return <span className='token-amount' title={`${formatTokenAmount(mutez)} mutez`}>{formatMutezAmount(mutez)} XTZ</span>;
+}
+
+// Says what kind of account a transfer destination is: a member, another multisig or a contract.
+export function DestinationTag({ address }) {
+    const { storage, contractsInfo } = useContext(MultisigContext);
+    const members = contractsInfo?.[address]?.members;
+    let label;
+
+    if (storage?.users?.includes(address)) {
+        label = 'member';
+    } else if (members !== undefined) {
+        label = `multisig · ${members} member${members === 1 ? '' : 's'}`;
+    } else if (address?.startsWith('KT1')) {
+        label = 'contract';
+    }
+
+    return label ? <span className='destination-tag mono-text'>{label}</span> : null;
+}
+
 export function QuorumBar({ yesCount, noCount, pendingCount, threshold }) {
     const safeThreshold = Math.max(threshold, 1);
     const yesWidth = Math.min(yesCount, safeThreshold) / safeThreshold * 100;
@@ -249,32 +287,44 @@ export function ProposalSummary({ proposalRecord }) {
 
     if (kind === 'transfer_mutez') {
         const transfers = proposal.mutez_transfers || [];
-        const total = transfers.reduce((sum, transfer) => sum + Number(transfer.amount || 0), 0);
+        const total = transfers.reduce((sum, transfer) => sum + BigInt(transfer.amount || 0), BigInt(0));
 
         if (transfers.length === 1) {
             return (
                 <span>
-                    transfer <span className='mono-text'>{formatMutezAmount(transfers[0].amount)} XTZ</span> to <TezosAddressLink address={transfers[0].destination} useAlias shorten />
+                    transfer <TezAmount mutez={transfers[0].amount} /> to <TezosAddressLink address={transfers[0].destination} useAlias shorten />
                 </span>
             );
         }
 
         return (
             <span>
-                transfer <span className='mono-text'>{formatMutezAmount(total)} XTZ</span> across {transfers.length} destinations
+                transfer <TezAmount mutez={total} /> across {transfers.length} destinations
             </span>
         );
     }
 
     if (kind === 'transfer_token') {
         const tokenTransfers = proposal.token_transfers;
-        const token = TOKENS.find(currentToken => currentToken.fa2 === tokenTransfers.fa2);
-        const total = tokenTransfers.distribution.reduce((sum, transfer) => sum + Number(transfer.amount || 0), 0);
+        const token = findToken(tokenTransfers.fa2, tokenTransfers.token_id);
+        const total = tokenTransfers.distribution.reduce((sum, transfer) => sum + BigInt(transfer.amount || 0), BigInt(0));
+        const destinations = tokenTransfers.distribution.length === 1
+            ? <TezosAddressLink address={tokenTransfers.distribution[0].destination} useAlias shorten />
+            : `${tokenTransfers.distribution.length} destinations`;
+
+        if (token?.symbol) {
+            return (
+                <span>
+                    transfer <TokenAmount amount={total} token={token} /> to {destinations}
+                </span>
+            );
+        }
+
         const label = token ? (token.multiasset ? `token #${tokenTransfers.token_id}` : token.name) : tokenTransfers.fa2;
 
         return (
             <span>
-                transfer <span className='mono-text'>{total.toLocaleString('en-US')}</span> to {tokenTransfers.distribution.length} destination{tokenTransfers.distribution.length === 1 ? '' : 's'} from <TokenLink fa2={tokenTransfers.fa2} id={tokenTransfers.token_id}>{label}</TokenLink>
+                transfer <TokenAmount amount={total} token={token} /> to {destinations} from <TokenLink fa2={tokenTransfers.fa2} id={tokenTransfers.token_id}>{label}</TokenLink>
             </span>
         );
     }

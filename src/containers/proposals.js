@@ -1,8 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { Parser, emitMicheline } from '@taquito/michel-codec';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { TOKENS } from '../constants';
-import { CopyButton, DataLoadError, KindBadge, ProposalIdLink, ProposalSummary, QuorumBar, VoteRow, useIpfsText } from './dashboard-components';
+import { CopyButton, DataLoadError, DestinationTag, KindBadge, ProposalIdLink, ProposalSummary, QuorumBar, TezAmount, TokenAmount, VoteRow, useIpfsText } from './dashboard-components';
 import { MultisigContext } from './context';
 import { DefaultLink, TezosAddressLink, TokenLink } from './links';
 import {
@@ -14,12 +13,13 @@ import {
     buildProposalRecords,
     buildProposalStorageLink,
     buildVoteOperationsLink,
-    formatMutezAmount,
+    findToken,
     formatRelativeTime,
     formatTimestamp,
     IPFS_GATEWAYS,
     PROPOSAL_KIND_METADATA,
     shortenAddress,
+    tokenBalanceKey,
 } from './utils';
 
 
@@ -460,41 +460,88 @@ function IpfsPanel({ cid }) {
     );
 }
 
+// Returns a payload row with the current multisig balance, flagging when it cannot cover the transfer total.
+function buildBalanceRow({ balance, total, renderAmount }) {
+    if (balance === undefined) {
+        return { label: 'multisig balance', value: <span className='detail-card__message'>unavailable</span> };
+    }
+
+    const shortfall = total - BigInt(balance);
+
+    return {
+        label: 'multisig balance',
+        value: (
+            <>
+                {renderAmount(balance)}
+                {shortfall > 0 && <span className='payload-warning'> not enough to execute yet, short by {renderAmount(shortfall)}</span>}
+            </>
+        )
+    };
+}
+
 function PayloadCard({ proposalRecord }) {
+    const { balance, tokenBalances } = useContext(MultisigContext);
     const proposal = proposalRecord.proposal;
-    const token = proposal.kind.transfer_token ? TOKENS.find(currentToken => currentToken.fa2 === proposal.token_transfers.fa2) : undefined;
+    const isOpen = proposalRecord.status === 'open';
     let rows;
 
     if (proposalRecord.kind === 'transfer_mutez') {
+        const total = proposal.mutez_transfers.reduce((sum, transfer) => sum + BigInt(transfer.amount), BigInt(0));
+
         rows = proposal.mutez_transfers.map((transfer, index) => ({
             label: proposal.mutez_transfers.length > 1 ? `transfer ${index + 1}` : 'transfer',
             value: (
                 <>
-                    <span className='mono-text'>{formatMutezAmount(transfer.amount)} XTZ</span>
+                    <TezAmount mutez={transfer.amount} />
                     {' to '}
                     <TezosAddressLink address={transfer.destination} useAlias shorten />
+                    <DestinationTag address={transfer.destination} />
                 </>
             )
         }));
+
+        if (isOpen) {
+            rows.push(buildBalanceRow({ balance, total, renderAmount: amount => <TezAmount mutez={amount} /> }));
+        }
     } else if (proposalRecord.kind === 'transfer_token') {
+        const { fa2, token_id: tokenId, distribution } = proposal.token_transfers;
+        const token = findToken(fa2, tokenId);
+        const total = distribution.reduce((sum, transfer) => sum + BigInt(transfer.amount), BigInt(0));
+
         rows = [
-            { label: 'token contract', value: <TokenLink fa2={proposal.token_transfers.fa2} id={proposal.token_transfers.token_id}>{token?.name || proposal.token_transfers.fa2}</TokenLink> },
-            { label: 'token id', value: <span className='mono-text'>{proposal.token_transfers.token_id}</span> },
+            {
+                label: 'token contract',
+                value: token ? (
+                    <>
+                        <TokenLink fa2={fa2} id={tokenId}>{token.name}</TokenLink>
+                        <span className='payload-grid__separator'>·</span>
+                        <TezosAddressLink address={fa2} shorten />
+                    </>
+                ) : <TokenLink fa2={fa2} id={tokenId}>{fa2}</TokenLink>
+            },
+            // Known fungible tokens always use the same token id, so it is only shown for the others
+            ...(token?.tokenId === undefined ? [{ label: 'token id', value: <span className='mono-text'>{tokenId}</span> }] : []),
             {
                 label: 'distribution',
                 value: (
                     <div className='payload-list'>
-                        {proposal.token_transfers.distribution.map((transfer, index) => (
+                        {distribution.map((transfer, index) => (
                             <span key={`${transfer.destination}-${index}`}>
-                                <span className='mono-text'>{Number(transfer.amount).toLocaleString('en-US')}</span>
+                                <TokenAmount amount={transfer.amount} token={token} />
                                 {' to '}
                                 <TezosAddressLink address={transfer.destination} useAlias shorten />
+                                <DestinationTag address={transfer.destination} />
                             </span>
                         ))}
                     </div>
                 )
             }
         ];
+
+        if (isOpen) {
+            const tokenBalance = tokenBalances === undefined ? undefined : (tokenBalances[tokenBalanceKey(fa2, tokenId)] || '0');
+            rows.push(buildBalanceRow({ balance: tokenBalance, total, renderAmount: amount => <TokenAmount amount={amount} token={token} /> }));
+        }
     } else if (proposalRecord.kind === 'add_user' || proposalRecord.kind === 'remove_user') {
         rows = [{ label: 'member', value: <TezosAddressLink address={proposal.user} useAlias shorten /> }];
     } else if (proposalRecord.kind === 'minimum_votes') {
@@ -525,7 +572,6 @@ function PayloadCard({ proposalRecord }) {
                     <span className='detail-card__label'>Payload</span>
                     <span>{PROPOSAL_KIND_METADATA[proposalRecord.kind]?.label || proposalRecord.kind}</span>
                 </div>
-                <span className='detail-card__variant mono-text'>{proposalRecord.variantTag}</span>
             </div>
             <div className='payload-grid'>
                 {rows.map(row => (
@@ -654,6 +700,11 @@ function ProvenanceCard({ contractAddress, proposalRecord, storage }) {
                 <DefaultLink href={buildProposalStorageLink(proposalRecord.id, contractAddress)} className='detail-card__link'>
                     proposal #{proposalRecord.id} on TzKT
                 </DefaultLink>
+                {proposalRecord.variantTag && (
+                    <span className='detail-card__message'>
+                        payload variant <span className='detail-card__variant mono-text'>{proposalRecord.variantTag}</span>
+                    </span>
+                )}
                 <DefaultLink href={buildVoteOperationsLink(contractAddress)} className='detail-card__link'>
                     vote operations on TzKT
                 </DefaultLink>
