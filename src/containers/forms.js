@@ -3,7 +3,8 @@ import { TOKENS } from '../constants';
 import { MultisigContext } from './context';
 import { Button } from './button';
 import { IpfsLink } from './links';
-import { findToken, toBaseUnits } from './utils';
+import { TezAmount, TokenAmount } from './dashboard-components';
+import { findToken, toBaseUnits, tokenBalanceKey } from './utils';
 
 
 const PROPOSAL_TYPES = [
@@ -145,9 +146,29 @@ export function CreateProposalForms() {
     );
 }
 
+// Returns the sum of the valid transfer amounts, in base units
+function sumBaseUnits(transfers, decimals) {
+    return transfers.reduce((sum, transfer) => sum + BigInt(toBaseUnits(transfer.amount, decimals) ?? 0), BigInt(0));
+}
+
+// Warns when the transfers add up to more than the multisig currently holds.
+// The proposal can still be created, since the multisig can be funded before execution.
+function BalanceWarning({ total, balance, renderAmount }) {
+    if (balance === undefined || total <= BigInt(balance)) {
+        return null;
+    }
+
+    return (
+        <p className='create-proposal-warning'>
+            Warning: the multisig currently holds {renderAmount(balance)}, which is {renderAmount(total - BigInt(balance))} less
+            than this proposal sends. You can still create it, but it can only be executed once the multisig holds enough.
+        </p>
+    );
+}
+
 function TransferTezProposalForm(props) {
     // Get the required multisig context information
-    const { setErrorMessage } = useContext(MultisigContext);
+    const { balance, setErrorMessage } = useContext(MultisigContext);
 
     // Set the component state
     const [transfers, setTransfers] = useState([
@@ -253,6 +274,7 @@ function TransferTezProposalForm(props) {
                 {' '}
                 <Button text='-' onClick={e => handleClick(e, false)} />
             </div>
+            <BalanceWarning total={sumBaseUnits(transfers, 6)} balance={balance} renderAmount={amount => <TezAmount mutez={amount} />} />
             <input type='submit' value='send proposal' />
         </form>
     );
@@ -260,7 +282,7 @@ function TransferTezProposalForm(props) {
 
 function TransferTokenProposalForm(props) {
     // Get the required multisig context information
-    const { setErrorMessage } = useContext(MultisigContext);
+    const { setErrorMessage, tokenBalances } = useContext(MultisigContext);
 
     // Set the component state
     const [tokenContract, setTokenContract] = useState('');
@@ -275,6 +297,11 @@ function TransferTokenProposalForm(props) {
     const decimals = token ? token.decimals : 0;
     const step = decimals > 0 ? `0.${'0'.repeat(decimals - 1)}1` : '1';
     const amountLabel = token?.symbol ? `Amount (${token.symbol})` : (token ? 'Token editions' : 'Amount (raw token units)');
+
+    // Tokens the multisig does not hold are missing from the balances, so they count as zero
+    const tokenBalance = tokenBalances !== undefined && tokenContract && tokenId !== ''
+        ? (tokenBalances[tokenBalanceKey(tokenContract, tokenId)] || '0')
+        : undefined;
 
     // Define the token contract on change handler
     const handleTokenContractChange = value => {
@@ -425,6 +452,7 @@ function TransferTokenProposalForm(props) {
                 {' '}
                 <Button text='-' onClick={e => handleClick(e, false)} />
             </div>
+            <BalanceWarning total={sumBaseUnits(transfers, decimals)} balance={tokenBalance} renderAmount={amount => <TokenAmount amount={amount} token={token} />} />
             <input type='submit' value='send proposal' />
         </form>
     );

@@ -473,7 +473,7 @@ function buildBalanceRow({ balance, total, renderAmount }) {
         value: (
             <>
                 {renderAmount(balance)}
-                {shortfall > 0 && <span className='payload-warning'> not enough to execute, short by {renderAmount(shortfall)}</span>}
+                {shortfall > 0 && <span className='payload-warning'> not enough to execute yet, short by {renderAmount(shortfall)}</span>}
             </>
         )
     };

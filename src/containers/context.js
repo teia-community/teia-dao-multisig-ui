@@ -202,9 +202,8 @@ export class MultisigContextProvider extends React.Component {
 
             // Creates a transfer mutez proposal
             createTransferMutezProposal: async (transfers) => {
-                // Loop over the transfers information
-                let totalAmount = BigInt(0);
-
+                // Loop over the transfers information. Amounts above the current
+                // balance are allowed, since the multisig can be funded before execution
                 for (const transfer of transfers) {
                     // Check that the destination address is a valid address
                     const destination = transfer.destination;
@@ -213,14 +212,6 @@ export class MultisigContextProvider extends React.Component {
                         this.state.setErrorMessage(`The provided address is not a valid tezos address: ${destination}`);
                         return;
                     }
-
-                    totalAmount += BigInt(transfer.amount);
-                }
-
-                // Check that the total amount is smaller thant the contract balance
-                if (this.state.balance !== undefined && totalAmount > BigInt(this.state.balance)) {
-                    this.state.setErrorMessage('The total amount of tez to transfer is larger than the current contract balance');
-                    return;
                 }
 
                 // Get the multisig contract reference
@@ -241,27 +232,14 @@ export class MultisigContextProvider extends React.Component {
                     return;
                 }
 
-                // Loop over the transfers information
-                let totalAmount = BigInt(0);
-
+                // Loop over the transfers information. Amounts above the current
+                // balance are allowed, since the multisig can be funded before execution
                 for (const transfer of transfers) {
                     // Check that the destination address is a valid address
                     const destination = transfer.destination;
 
                     if (!(destination && validateAddress(destination) === 3)) {
                         this.state.setErrorMessage(`The provided address is not a valid tezos address: ${destination}`);
-                        return;
-                    }
-
-                    totalAmount += BigInt(transfer.amount);
-                }
-
-                // Check that the total amount is smaller than the contract token balance
-                if (this.state.tokenBalances !== undefined) {
-                    const tokenBalance = this.state.tokenBalances[utils.tokenBalanceKey(tokenAddress, tokenId)] || '0';
-
-                    if (totalAmount > BigInt(tokenBalance)) {
-                        this.state.setErrorMessage('The total amount of tokens to transfer is larger than the current contract token balance');
                         return;
                     }
                 }
