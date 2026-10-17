@@ -132,6 +132,8 @@
     .dashboard-section__count,
     .proposal-summary__fallback-note,
     .token-amount__raw,
+    .destination-tag,
+    .payload-grid__separator,
     .dashboard-section__subtitle,
     .proposal-row__status-copy,
     .detail-card__label,
@@ -262,7 +264,12 @@
         color: #8fd3a0;
     }
 
+    .destination-tag {
+        border-color: $dark-border;
+    }
+
     .proposal-row__vote-state.is-no,
+    .payload-warning,
     .history-summary__no,
     .history-summary__vote.is-no,
     .participation-bar__no-copy {

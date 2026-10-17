@@ -1,4 +1,4 @@
-import { buildMembersDirectory, findToken, formatTokenAmount, toBaseUnits } from './utils';
+import { buildMembersDirectory, findToken, formatMutezAmount, formatTokenAmount, toBaseUnits } from './utils';
 
 
 describe('formatTokenAmount', () => {
@@ -13,6 +13,14 @@ describe('formatTokenAmount', () => {
 
     test('keeps amounts beyond the float range exact', () => {
         expect(formatTokenAmount('1000000000000000000001', 18)).toBe('1,000.000000000000000001');
+    });
+});
+
+describe('formatMutezAmount', () => {
+    test('shows every mutez instead of rounding', () => {
+        expect(formatMutezAmount('1005000')).toBe('1.005');
+        expect(formatMutezAmount('176115082')).toBe('176.115082');
+        expect(formatMutezAmount(BigInt(2500000000))).toBe('2,500');
     });
 });
 

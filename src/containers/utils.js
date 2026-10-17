@@ -98,6 +98,57 @@ export async function getBalance(account, network = NETWORK) {
     return await tzktGet('getBalance', `https://api.${network}.tzkt.io/v1/accounts/${account}/balance`);
 }
 
+// Returns the key used to look up a token in the token balances dictionary
+export function tokenBalanceKey(fa2, tokenId) {
+    return `${fa2}:${tokenId}`;
+}
+
+// Returns the non-zero token balances of an account, keyed by tokenBalanceKey
+export async function getTokenBalances(account, network = NETWORK) {
+    const parameters = {
+        account: account,
+        'balance.gt': 0,
+        select: 'token.contract.address,token.tokenId,balance',
+        limit: 10000,
+    };
+    const data = await tzktGet('getTokenBalances', `https://api.${network}.tzkt.io/v1/tokens/balances`, parameters);
+
+    // Rearange the token balances information in a dictionary
+    const balances = data ? {} : undefined;
+    data?.forEach(row => balances[tokenBalanceKey(row['token.contract.address'], row['token.tokenId'])] = row.balance);
+
+    return balances;
+}
+
+// Returns the TzKT alias of each contract address, and its member count when
+// the contract storage looks like a multisig (a users list and minimum votes)
+export async function getContractsInfo(addresses, network = NETWORK) {
+    const contracts = Array.from(new Set(addresses)).filter(address => address.startsWith('KT1'));
+
+    if (contracts.length === 0) {
+        return {};
+    }
+
+    const [aliases, storages] = await Promise.all([
+        tzktGet('getContractsInfo', `https://api.${network}.tzkt.io/v1/contracts`, { 'address.in': contracts.join(','), select: 'address,alias' }),
+        Promise.all(contracts.map(contract => getContractStorage(contract, network)))
+    ]);
+
+    // Rearange the contracts information in a dictionary
+    const contractsInfo = {};
+    contracts.forEach((address, index) => {
+        const storage = storages[index];
+        const isMultisig = Array.isArray(storage?.users) && storage.minimum_votes !== undefined;
+
+        contractsInfo[address] = {
+            alias: aliases?.find(contract => contract.address === address)?.alias || undefined,
+            members: isMultisig ? storage.users.length : undefined,
+        };
+    });
+
+    return contractsInfo;
+}
+
 // Returns some bigmap keys
 export async function getBigmapKeys(bigmap, extraParameters = {}, network = NETWORK) {
     const parameters = Object.assign(
@@ -274,13 +325,9 @@ export function shortenAddress(address, left = 6, right = 4) {
     return `${address.slice(0, left)}...${address.slice(-right)}`;
 }
 
-// Formats a mutez amount as tez.
+// Formats a mutez amount as tez, without rounding.
 export function formatMutezAmount(mutez) {
-    const tez = Number(mutez || 0) / 1000000;
-
-    return tez.toLocaleString('en-US', {
-        maximumFractionDigits: tez >= 1 ? 2 : 6
-    });
+    return formatTokenAmount(mutez, 6);
 }
 
 // Returns the known token for an FA2 contract and token id, if any.

@@ -420,6 +420,32 @@ textarea {
     font-size: 0.9em;
 }
 
+// Repeating the generic family stops browsers shrinking monospace text,
+// so amounts render at the same size as the text around them
+.token-amount {
+    font-family: monospace, monospace;
+}
+
+.destination-tag {
+    display: inline-block;
+    margin-left: 0.5em;
+    padding: 0.1em 0.45em;
+    border: $default-border;
+    border-radius: $border-radius;
+    font-size: 0.8em;
+    color: $header-color;
+    vertical-align: middle;
+}
+
+.payload-warning {
+    color: darken(red, 10%);
+}
+
+.payload-grid__separator {
+    margin: 0 0.5em;
+    color: $header-color;
+}
+
 .parameters-page,
 .create-proposals-page {
     display: grid;
